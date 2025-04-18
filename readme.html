@@ -1,0 +1,346 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>igmp</title>
+
+  <style>
+    body {
+      background-color: #FFF;
+      color: #333;
+      font: 15px Helvetica, arial, freesans, clean, sans-serif;
+      word-wrap: break-word;
+      line-height: 1.7;
+      padding: 0 30px;
+      width: 722px;
+      -webkit-font-smoothing: antialiased;
+      margin-top: 30px;
+      margin-bottom: 30px;
+      margin-left: auto;
+      margin-right: auto;
+      border: 1px solid #D0D7DE;
+      border-radius: 4px;
+    }
+
+    a {
+      color: #4183c4;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    p, blockquote, ul, ol, dl, table, pre {
+      margin: 15px 0;
+    }
+
+    ul, ol {
+      padding-left: 30px;
+    }
+
+    h1 {
+      border-bottom: 1px solid #ddd;
+      color: #000;
+      font-size: 2.3em;
+    }
+
+    h2 {
+      border-bottom: 1px solid #eee;
+      color: #000;
+      font-size: 1.8em;
+    }
+
+    h3 {
+      font-size: 1.5em;
+    }
+
+    h4 {
+      font-size: 1.2em;
+    }
+
+    h5 {
+      font-size: 1.0em;
+    }
+
+    h6 {
+      color: #777;
+      font-size: 1.0em;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      font-weight: bold;
+      line-height: 1.7;
+      margin: 1em 0 15px 0;
+    }
+
+    h1 + p, h2 + p, h3 + p {
+      margin-top: 10px;
+    }
+      
+    code {
+      background-color: #F6F8FA;
+      border-radius: 3px;
+      border: 1px solid #D0D7DE;
+      font-family: Consolas, "Liberation Mono", Courier, monospace;
+      font-size: 12px;
+      margin-top: 10px;
+      margin-bottom: 10px;
+      padding: 0;
+      white-space: pre;
+      width: 100%;
+      display: block;
+    }
+
+    .blocktext {
+      margin-left: auto;
+      margin-right: auto;
+      width: 800px;
+      border: 1px solid #D0D7DE;
+      border-radius: 4px;
+      padding: 10px 30px 10px 30px;
+    }
+    
+  </style>
+</head>
+
+<body>
+  <h1>igmp</h1>
+
+  <p>O projeto <b>igmp</b>, plataforma Web e Mobile para Controle de Produção Industrial, consiste em uma API REST desenvolvida com o framework Node.js/Express em TypeScript, banco de dados PostegreSQL, acessado através do ORM TypeORM e upload de arquivos através da biblioteca Multer.</p> 
+
+  <h2>Requisitos necessários</h2>
+
+  <p>Para que a aplicação possa ser executada e testada em ambiente local de desenvolvimento, alguns itens de software devem estar previamente instalados.</p>
+
+  <ul>
+    <li>Node.js <a href="https://nodejs.org/en/download/package-manager/" target="_blank">(Guia de Instalação)</a></li>
+    <li>Yarn <a href="https://classic.yarnpkg.com/lang/en/docs/install" target="_blank">(Guia de Instalação)</a>, caso prefira usar no lugar do npm. Neste documento o Yarn será utilizado nos procedimentos.</li>
+    <li>Docker <a href="https://docs.docker.com/engine/install/" target="_blank">(Guia de Instalação)</a></li>
+    <li>Docker Compose <a href="https://docs.docker.com/compose/install/" target="_blank">(Guia de Instalação)</a></li>
+    <li>Postman <a href="https://www.postman.com/downloads/" target="_blank">(Guia de Instalação)</a> ou Insomnia <a href="https://insomnia.rest/download" target="_blank">(Guia de Instalação)</a></li>
+    <li>Conta de e-mail fake para testes no Ethereal <a href="https://ethereal.login/create" target="_blank">(Criação de conta fake)</a></li>
+  </ul>
+
+  <h2>Requisitos opcionais</h2>
+  <ul>
+    <li><b>Editor SQL</b>: Beekeeper Studio <a href="https://www.beekeeperstudio.io/" target="_blank">(Download)</a>, DBeaver Community <a href="https://dbeaver.io/download/" target="_blank">(Download)</a></li>
+  </ul>
+
+  <br/>
+
+  <h2>Como executar a aplicação</h2>
+
+  <h3>Configuração inicial do ambiente</h3>
+
+  <ol>
+    <li>Crie uma pasta em um local onde você tenha direitos de gravação e leitura</li>
+    <li>Descompacte o arquivo zip e copie os arquivos da aplicação para a pasta criada</li>
+    <li>Alterar dados de acesso ao banco de dados, caso seja necessário, editando os arquivos "docker-compose.yml" e "ormconfig.json" na raiz do projeto.</li>
+    <li>Todos os passos a seguir devem ser executados em linha de comando, a partir do local onde o projeto foi copiado</li>
+    <li>Instalar os pacotes necessários para a execução da aplicação, digitando os comandos:</li>
+
+    <code>
+      yarn
+    </code>
+  </ol>
+  
+  <br/>
+  
+  <h3>Início rápido com servidor PostgreSQL já instalado</h3>
+
+  <p>Antes que qualquer comando possa ser executado, é necessário que o caminho onde os binários do PostgreSQL estão localizados, seja adicionado ao PATH do sistema operacional.</p>
+
+  <p>No Windows para a versão 14 do PostgreSQL seria por exemplo: "C:\Program Files\PostgreSQL\14\bin".</p>
+  
+  <p>Agora um passo a passo para iniciar a aplicação de forma rápida.</p>
+
+  <p>Abra uma nova seção de linha de comando. Mude para a pasta onde se encontra a aplicação. Nesta janela digite os seguintes comandos para criar usuário e banco de dados para a aplicação:</p>
+
+  <code>
+    psql -h localhost -d postgres -U postgres
+    Password for user postgres:
+    psql (14.2)
+    Type "help" for help.
+    
+    postgres=# create user igmp_user with encrypted password '123456'
+    postgres=# create database igmp_db
+    postgres=# grant all privileges on database igmp_db to igmp_user
+    postgres=# exit
+  </code>
+
+  <p>Na mesma pasta do passo anterior onde será executada a aplicação, digite os comandos:</p>
+  
+  <code>
+    yarn run typeorm migration:run
+    yarn run seed:admin
+    yarn run dev
+  </code>
+
+  <p>Testar o acesso a API através do Swagger UI em: <a href="http://localhost:3333/api-docs" target="_blank">http://localhost:3333/api-docs</a></p>
+
+  <br/>
+  
+  <h3>Início rápido com Docker</h3>
+
+  <p>Aqui um passo a passo para iniciar a aplicação de forma rápida. Caso ocorra algum problema, ou deseje conhecer os detalhes de cada passo, siga para a próxima seção.</p>
+
+  <p>Abra uma nova seção de linha de comando. Mude para a pasta onde se encontra a aplicação. Nesta janela será executado o container, digitando os comandos:</p>
+
+  <code>
+    docker-compose up
+  </code>
+
+  <p>Abra uma nova seção de linha de comando, na mesma pasta do passo anterior, onde será executada a aplicação:</p>
+  
+  <code>
+    yarn run typeorm migration:run
+    yarn run seed:admin
+    yarn run dev
+  </code>
+
+  <p>Testar o acesso a API através do Swagger UI em: <a href="http://localhost:3333/api-docs" target="_blank">http://localhost:3333/api-docs</a></p>
+
+  <br/>
+
+  <h3>Gerenciando os containers Docker do PostgreSQL e Redis</h3>
+
+  <p>Para iniciar os containers com a exibição contínua do log, que auxiliará na depuração inicial do ambiente, digite os comandos a seguir.</p>
+
+  <p>A sessão do terminal permanecerá ativa, até que sejam pressionadas as teclas CTRL+C duas vezes seguidas. Neste modo o PostgreSQL e o Redis somente estarão disponíveis para a aplicação, enquanto essa janela estiver aberta.</p>
+  
+  <p>Para que os containers rodem em background, devem ser seguidos os passos da seção <a href="#background_containers">Containers em Background</a></p>
+
+  <code>
+    docker-compose up
+    
+    [+] Running 3/3
+     - Network network_igmp     Created                                  0.0s
+     - Container database_igmp  Created                                  0.0s
+     - Container redis_igmp     Created                                  0.0s
+    Attaching to database_igmp, redis_igmp
+    database_igmp  |
+    database_igmp  | PostgreSQL Database directory appears to contain a database ...
+    database_igmp  |
+    ...
+  </code>
+
+  <p>Para verificar o status dos containers, abra outra janela de linha de comando, digite:</p>
+
+  <code>
+    docker ps
+    
+    CONTAINER ID   IMAGE          ...   STATUS         PORTS                    NAMES
+    bec89ece9546   postgres       ...   Up 5 seconds   0.0.0.0:5432->5432/tcp   database_igmp
+    1f1efb10abbd   redis:alpine   ...   Up 5 seconds   0.0.0.0:6379->6379/tcp   redis_igmp
+  </code>
+
+  <p>Para verificar o log de um container, em linha de comando digite o comando utilizando o nome do container desejado:</p>
+
+  <code>
+    docker logs database_igmp
+    
+    The files belonging to this database system will be owned by user "postgres".
+    This user must also own the server process.
+    
+    The database cluster will be initialized with locale "en_US.utf8".
+    The default database encoding has accordingly been set to "UTF8".
+    The default text search configuration will be set to "english".
+    
+    Data page checksums are disabled.
+    
+    fixing permissions on existing directory /var/lib/postgresql/data ... ok
+    creating subdirectories ... ok
+    selecting dynamic shared memory implementation ... posix
+    selecting default max_connections ... 100
+    selecting default shared_buffers ... 128MB
+    selecting default time zone ... Etc/UTC
+    creating configuration files ... ok
+    running bootstrap script ... ok
+    performing post-bootstrap initialization ... ok
+    initdb: warning: enabling "trust" authentication for local connections
+    You can change this by editing pg_hba.conf or using the option -A, or
+    --auth-local and --auth-host, the next time you run initdb.
+    syncing data to disk ... ok
+    
+    Success. You can now start the database server using:
+    ...
+  </code>
+
+  <p>Para iniciar uma sessão interativa com um container, utilizando o nome do container, digite o comando abaixo. Para encerrar a sessão, digite no prompt do container "exit" e pressione o enter.</p>
+
+  <code>
+    docker exec -it database_igmp /bin/bash
+    
+    root@bec89ece9546:/# exit
+  </code>
+
+  <p>Para encerrar os containers:</p>
+
+  <code>
+    docker-compose down
+    
+    [+] Running 3/3
+     - Container database_igmp  Removed                                  3.1s
+     - Container redis_igmp     Removed                                  3.2s
+     - Network network_igmp     Removed                                  0.2s
+  </code>
+
+  <p id="background_containers">Para iniciar os containers em background:</p>
+
+  <code>
+    docker-compose up -d
+    
+    [+] Running 3/3
+     - Network network_igmp     Started                                  0.0s
+     - Container database_igmp  Started                                  0.7s
+     - Container redis_igmp     Started                                  0.9s
+  </code>
+  
+  <br/>
+
+  <h3>Inicializar o banco de dados</h3>
+
+  <p>Antes de executar os passos a seguir, é importante verificar se o container do PostgreSQL está em execução.</p>
+
+  <ol>
+    <li>Executar as migrations do TypeORM para criação das tabelas no banco de dados:</li>
+
+    <code>
+      yarn run typeorm migration:run    
+    </code>
+
+    <p>Caso precise reverter a última migration:</p>
+
+    <code>
+      yarn run typeorm migration:revert    
+    </code>
+
+    <li>Executar o seed da tabela de usuarios, criando o usuario "admin", com a senha "admin":</li>
+
+    <code>
+      yarn run seed:admin    
+    </code>
+  </ol>
+  
+  <br/>
+
+  <h3>Executar e testar a aplicação</h3>
+
+  <ol>
+    <li>Executar a aplicação:</li>
+
+    <code>
+      yarn run dev    
+    </code>
+
+    <li>Testar o acesso a API através do Swagger UI em: <a href="http://localhost:3333/api-docs" target="_blank">http://localhost:3333/api-docs</a></li>
+  </ol>
+
+  <br/>
+
+</body>
+
+</html>
