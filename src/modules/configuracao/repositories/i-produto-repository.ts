@@ -47,6 +47,8 @@ interface IProdutoRepository {
 
     // multi delete
     multiDelete(ids: string[]): Promise<HttpResponse>
+
+    findByName(nome: string): Promise<HttpResponse>
 }
 
 export { IProdutoRepository }

@@ -7,12 +7,21 @@ import { getConnection } from "typeorm"
 import xlsx from "xlsx"
 import fs from "fs"
 import path from "path"
+import { IEstadoRepository } from "@modules/comum/repositories/i-estado-repository"
+import { ICidadeRepository } from "@modules/comum/repositories/i-cidade-repository"
+import { IClienteRepository } from "@modules/configuracao/repositories/i-cliente-repository"
 
 @injectable()
 class ImportProdutoUseCase {
     constructor(
         @inject("ProdutoRepository")
-        private produtoRepository: IProdutoRepository
+        private produtoRepository: IProdutoRepository,
+        @inject("EstadoRepository")
+        private estadoRepository: IEstadoRepository,
+        @inject("CidadeRepository")
+        private cidadeRepository: ICidadeRepository,
+        @inject("ClienteRepository")
+        private clienteRepository: IClienteRepository
     ) {}
 
     private async parseExcelFile(file: Express.Multer.File): Promise<any[]> {
@@ -30,7 +39,7 @@ class ImportProdutoUseCase {
         const queryRunner = getConnection().createQueryRunner()
         await queryRunner.startTransaction()
 
-        const file = path.resolve(__dirname, "itens_filtrados.xlsx")
+        const file = path.resolve(__dirname, "clientes.xlsx")
 
         const result = []
 
@@ -38,16 +47,36 @@ class ImportProdutoUseCase {
             const rows = await this.parseExcelFile({ path: file } as Express.Multer.File)
 
             for (const row of rows) {
-                const produtoData = await this.produtoRepository.createWithQueryRunner(
+                //Cliente import logic
+                const estado = await this.estadoRepository.getByName(row.estado)
+                const cidade = await this.cidadeRepository.getByName(row.cidade, estado.data.id)
+                console.log("Estado:", estado)
+                console.log("Cidade:", cidade)
+                console.log("Row:", row)
+                await this.clienteRepository.createWithQueryRunner(
                     {
-                        nome: row.codigo,
-                        descricao: row.descricao,
-                        tipo: row.grupo == "AC" ? 0 : 1,
+                        nome: row.nome,
+                        cpf: row.cpf.replace(/\D/g, ""),
+                        telefone: row.telefone,
+                        email: row.nome.replace(/\s/g, "").toLowerCase() + "@mail.com",
+                        cidadeId: cidade.data.id,
+                        estadoId: estado.data.id,
                     },
                     queryRunner.manager
                 )
-
-                result.push(produtoData)
+                //
+                //
+                //
+                // Produto import logic
+                // const produtoData = await this.produtoRepository.createWithQueryRunner(
+                //     {
+                //         nome: row.codigo,
+                //         descricao: row.descricao,
+                //         tipo: row.grupo == "AC" ? 0 : 1,
+                //     },
+                //     queryRunner.manager
+                // )
+                // result.push(produtoData)
             }
 
             await queryRunner.commitTransaction()

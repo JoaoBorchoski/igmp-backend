@@ -157,8 +157,6 @@ class ProdutoRepository implements IProdutoRepository {
                 .take(rowsPerPage)
                 .getRawMany()
 
-            console.log("Produtos list:", produtos)
-
             return ok(produtos)
         } catch (err) {
             console.error("Error listing produtos:", err)
@@ -293,6 +291,25 @@ class ProdutoRepository implements IProdutoRepository {
                 throw new AppError("not null constraint", 404)
             }
 
+            return serverError(err)
+        }
+    }
+
+    async findByName(nome: string): Promise<HttpResponse> {
+        try {
+            const produto = await this.repository
+                .createQueryBuilder("prod")
+                .select(['prod.id as "id"', 'prod.nome as "nome"'])
+                .where("prod.nome like :nome", { nome: `%${nome}%` })
+                .orWhere("prod.descricao like :nome", { nome: `%${nome}%` })
+                .getRawOne()
+
+            if (!produto) {
+                return null
+            }
+
+            return ok(produto)
+        } catch (err) {
             return serverError(err)
         }
     }
