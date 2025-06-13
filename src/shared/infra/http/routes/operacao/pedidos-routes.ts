@@ -11,7 +11,7 @@ import { UpdatePedidoController } from "@modules/operacao/use-cases/pedido/updat
 import { DeletePedidoController } from "@modules/operacao/use-cases/pedido/delete-pedido/delete-pedido-controller"
 import { MultiDeletePedidoController } from "@modules/operacao/use-cases/pedido/multi-delete-pedido/multi-delete-pedido-controller"
 import { ensureAuthenticated } from "@shared/infra/http/middlewares/ensure-authenticated"
-import { ImportPedidosController } from "@modules/operacao/use-cases/pedido/import-pedido/import-funcinario-controller"
+import { ImportPedidosController } from "@modules/operacao/use-cases/pedido/import-pedido/import-pedido-controller"
 
 const uploadFiles = multer(uploadConfig)
 const pedidosRoutes = Router()
