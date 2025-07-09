@@ -42,6 +42,11 @@ interface IPedidoRepository {
     // update
     update(data: IPedidoDTO): Promise<HttpResponse>
 
+    updateWithQueryRunner(
+        { id, sequencial, cliente, telefone, cep, endereco, numero, complemento, bairro, estadoId, cidadeId, status }: IPedidoDTO,
+        transactionManager: EntityManager
+    ): Promise<HttpResponse>
+
     // delete
     delete(id: string): Promise<HttpResponse>
 

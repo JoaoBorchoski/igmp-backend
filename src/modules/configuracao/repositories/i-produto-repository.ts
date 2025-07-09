@@ -49,6 +49,8 @@ interface IProdutoRepository {
     multiDelete(ids: string[]): Promise<HttpResponse>
 
     findByName(nome: string): Promise<HttpResponse>
+
+    findByNameWithQueryRunner(nome: string, transactionManager: EntityManager): Promise<HttpResponse>
 }
 
 export { IProdutoRepository }

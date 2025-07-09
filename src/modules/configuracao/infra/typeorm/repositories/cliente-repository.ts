@@ -175,6 +175,7 @@ class ClienteRepository implements IClienteRepository {
                 .select(['cli.id as "value"', 'cli.nome as "label"'])
                 .where("cli.nome ilike :filter", { filter: `${filter}%` })
                 .addOrderBy("cli.nome")
+                .limit(50)
                 .getRawMany()
 
             return ok(clientes)
@@ -347,6 +348,30 @@ class ClienteRepository implements IClienteRepository {
                 throw new AppError("not null constraint", 404)
             }
 
+            return serverError(err)
+        }
+    }
+
+    async findByName(nome: string): Promise<HttpResponse> {
+        try {
+            const cliente = await this.repository
+                .createQueryBuilder("cli")
+                .select([
+                    'cli.id as "id"',
+                    'cli.nome as "nome"',
+                    'cli.cpf as "cpf"',
+                    'cli.email as "email"',
+                    'cli.telefone as "telefone"',
+                ])
+                .where("cli.nome ilike :nome", { nome: `%${nome}%` })
+                .getRawOne()
+
+            if (cliente.length === 0) {
+                return noContent()
+            }
+
+            return ok(cliente)
+        } catch (err) {
             return serverError(err)
         }
     }

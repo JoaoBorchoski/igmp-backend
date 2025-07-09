@@ -1,51 +1,60 @@
-import { ForbiddenError, ServerError, UnauthorizedError, NotFoundError, SendMailError, ConflictError } from '@shared/errors'
+import { ForbiddenError, ServerError, UnauthorizedError, NotFoundError, SendMailError, ConflictError } from "@shared/errors"
 
 export type HttpResponse<T = any> = {
-  statusCode: number
-  data: T
+    statusCode: number
+    data: T
 }
 
-export const ok = <T = any> (data: T): HttpResponse<T> => ({
-  statusCode: 200,
-  data
+export const ok = <T = any>(data: T): HttpResponse<T> => ({
+    statusCode: 200,
+    data,
 })
 
 export const noContent = (): HttpResponse => ({
-  statusCode: 204,
-  data: null
+    statusCode: 204,
+    data: null,
 })
 
 export const badRequest = (error: Error): HttpResponse<Error> => ({
-  statusCode: 400,
-  data: error
+    statusCode: 400,
+    data: error,
 })
 
 export const unauthorized = (): HttpResponse<Error> => ({
-  statusCode: 401,
-  data: (new UnauthorizedError()).error
+    statusCode: 401,
+    data: new UnauthorizedError().error,
 })
 
 export const forbidden = (): HttpResponse<Error> => ({
-  statusCode: 403,
-  data: (new ForbiddenError()).error
+    statusCode: 403,
+    data: new ForbiddenError().error,
 })
 
 export const notFound = (): HttpResponse<Error> => ({
-  statusCode: 404,
-  data: (new NotFoundError()).error
+    statusCode: 404,
+    data: new NotFoundError().error,
 })
 
 export const conflictError = (type: string): HttpResponse<Error> => ({
-  statusCode: 409,
-  data: (new ConflictError(type)).error
+    statusCode: 409,
+    data: new ConflictError(type).error,
 })
 
 export const serverError = (error: Error): HttpResponse<Error> => ({
-  statusCode: 500,
-  data: (new ServerError(error)).error
+    statusCode: 500,
+    data: new ServerError(error).error,
 })
 
 export const sendMailFailure = (): HttpResponse<Error> => ({
-  statusCode: 502,
-  data: (new SendMailError()).error
+    statusCode: 502,
+    data: new SendMailError().error,
+})
+
+export const createError = (statusCode: number, message: string): HttpResponse<Error> => ({
+    statusCode,
+    data: {
+        name: "CustomError",
+        message,
+        stack: new Error().stack,
+    },
 })

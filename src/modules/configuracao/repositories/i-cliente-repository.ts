@@ -51,6 +51,8 @@ interface IClienteRepository {
 
     // multi delete
     multiDelete(ids: string[]): Promise<HttpResponse>
+
+    findByName(nome: string): Promise<HttpResponse>
 }
 
 export { IClienteRepository }

@@ -26,11 +26,13 @@ class PedidoRepository implements IPedidoRepository {
         estadoId,
         cidadeId,
         status,
+        dataEmissao,
     }: IPedidoDTO): Promise<HttpResponse> {
         const seqAtual = await this.repository
             .createQueryBuilder("ped")
             .select("MAX(ped.sequencial)", "maxSequencial")
             .getRawOne()
+
         sequencial = seqAtual.maxSequencial ? seqAtual.maxSequencial + 1 : sequencial
 
         const pedido = this.repository.create({
@@ -46,6 +48,7 @@ class PedidoRepository implements IPedidoRepository {
             estadoId,
             cidadeId,
             status,
+            dataEmissao,
         })
 
         const result = await this.repository
@@ -74,40 +77,47 @@ class PedidoRepository implements IPedidoRepository {
             estadoId,
             cidadeId,
             status,
+            dataEmissao,
         }: IPedidoDTO,
         transactionManager: EntityManager
     ): Promise<HttpResponse> {
-        const seqAtual = await this.repository
-            .createQueryBuilder("ped")
-            .select("MAX(ped.sequencial)", "maxSequencial")
-            .getRawOne()
-        sequencial = seqAtual.maxSequencial ? seqAtual.maxSequencial + 1 : sequencial
+        try {
+            const seqAtual = await this.repository
+                .createQueryBuilder("ped")
+                .select("MAX(ped.sequencial) :: INTEGER", "maxSequencial")
+                .getRawOne()
 
-        const pedido = transactionManager.create(Pedido, {
-            sequencial,
-            descricao,
-            cliente,
-            telefone,
-            cep,
-            endereco,
-            numero,
-            complemento,
-            bairro,
-            estadoId,
-            cidadeId,
-            status,
-        })
+            sequencial = seqAtual.maxSequencial ? seqAtual.maxSequencial + 1 : 1
 
-        const result = await transactionManager
-            .save(pedido)
-            .then((pedidoResult) => {
-                return ok(pedidoResult)
-            })
-            .catch((error) => {
-                return serverError(error)
+            const pedido = transactionManager.create(Pedido, {
+                sequencial,
+                descricao,
+                cliente,
+                telefone,
+                cep,
+                endereco,
+                numero,
+                complemento,
+                bairro,
+                estadoId,
+                cidadeId,
+                status,
+                dataEmissao,
             })
 
-        return result
+            const result = await transactionManager
+                .save(pedido)
+                .then((pedidoResult) => {
+                    return ok(pedidoResult)
+                })
+                .catch((error) => {
+                    return serverError(error)
+                })
+
+            return result
+        } catch (error) {
+            console.log(error)
+        }
     }
 
     // list
@@ -138,15 +148,15 @@ class PedidoRepository implements IPedidoRepository {
                 .select([
                     'ped.id as "id"',
                     'ped.sequencial as "sequencial"',
-                    'ped.cliente as "cliente"',
-                    'a.id as "estadoId"',
-                    'a.uf as "estadoUf"',
+                    'c.nome as "cliente"',
+                    `TO_CHAR(ped.dataEmissao, 'DD/MM/YYYY') as "dataEmissao"`,
                 ])
-                .leftJoin("ped.estadoId", "a")
+                .leftJoin("clientes", "c", "c.id :: varchar = ped.cliente")
+                .where("ped.disabled = false")
 
-            if (filter) {
-                query = query.where(filter)
-            }
+            // if (filter) {
+            //     query = query.where(filter)
+            // }
 
             const pedidos = await query
                 .andWhere(
@@ -155,9 +165,7 @@ class PedidoRepository implements IPedidoRepository {
                         query.orWhere("CAST(ped.cliente AS VARCHAR) ilike :search", { search: `%${search}%` })
                     })
                 )
-                .addOrderBy("ped.sequencial", columnOrder[0])
-                .addOrderBy("ped.cliente", columnOrder[1])
-                .addOrderBy("a.uf", columnOrder[2])
+                .orderBy("ped.sequencial", "DESC")
                 .offset(offset)
                 .limit(rowsPerPage)
                 .take(rowsPerPage)
@@ -165,6 +173,7 @@ class PedidoRepository implements IPedidoRepository {
 
             return ok(pedidos)
         } catch (err) {
+            console.error("Error in PedidoRepository.list:", err)
             return serverError(err)
         }
     }
@@ -174,13 +183,16 @@ class PedidoRepository implements IPedidoRepository {
         try {
             const pedidos = await this.repository
                 .createQueryBuilder("ped")
-                .select(['ped.id as "value"', 'ped.sequencial as "label"'])
-                .where("ped.sequencial ilike :filter", { filter: `${filter}%` })
+                .select(['ped.id as "value"', "CONCAT(ped.sequencial, ' - ', c.nome) as \"label\"", 'c.nome as "cliente"'])
+                .leftJoin("clientes", "c", "c.id :: varchar = ped.cliente")
+                .where("ped.disabled = false")
+                .andWhere("ped.sequencial :: varchar ilike :filter", { filter: `${filter}%` })
                 .addOrderBy("ped.sequencial")
                 .getRawMany()
 
             return ok(pedidos)
         } catch (err) {
+            console.error("Error in PedidoRepository.select:", err)
             return serverError(err)
         }
     }
@@ -244,6 +256,8 @@ class PedidoRepository implements IPedidoRepository {
                     'ped.cidadeId as "cidadeId"',
                     'b.nomeCidade as "cidadeNome"',
                     'ped.status as "status"',
+                    'ped.descricao as "descricao"',
+                    `TO_CHAR(ped.dataEmissao, 'DD/MM/YYYY') as "dataEmissao"`,
                 ])
                 .leftJoin("ped.estadoId", "a")
                 .leftJoin("ped.cidadeId", "b")
@@ -253,6 +267,22 @@ class PedidoRepository implements IPedidoRepository {
             if (typeof pedido === "undefined") {
                 return noContent()
             }
+
+            const pedidoItems = await this.repository.query(
+                `
+                        SELECT 
+                            pi.id as "id",
+                            pi.quantidade :: int as "quantidade",
+                            prod.nome || ' - ' || prod.descricao as "produto",
+                            prod.id as "produtoId"
+                        FROM pedidos_items pi
+                        LEFT JOIN produtos prod ON prod.id :: varchar = pi.produto
+                        WHERE pi.pedido_id = $1
+                    `,
+                [pedido.id]
+            )
+
+            pedido.pedidoItems = pedidoItems
 
             return ok(pedido)
         } catch (err) {
@@ -306,10 +336,60 @@ class PedidoRepository implements IPedidoRepository {
         }
     }
 
+    async updateWithQueryRunner(
+        {
+            id,
+            sequencial,
+            descricao,
+            cliente,
+            telefone,
+            cep,
+            endereco,
+            numero,
+            complemento,
+            bairro,
+            estadoId,
+            cidadeId,
+            status,
+            dataEmissao,
+        }: IPedidoDTO,
+        transactionManager: EntityManager
+    ): Promise<HttpResponse> {
+        const pedido = await transactionManager.findOne(Pedido, id)
+
+        if (!pedido) {
+            return notFound()
+        }
+
+        const newpedido = transactionManager.create(Pedido, {
+            id,
+            sequencial,
+            cliente,
+            telefone,
+            cep,
+            endereco,
+            numero,
+            complemento,
+            bairro,
+            estadoId,
+            cidadeId,
+            status,
+        })
+
+        try {
+            await transactionManager.save(Pedido, newpedido)
+
+            return ok(newpedido)
+        } catch (err) {
+            return serverError(err)
+        }
+    }
+
     // delete
     async delete(id: string): Promise<HttpResponse> {
         try {
-            await this.repository.delete(id)
+            // await this.repository.delete(id)
+            await this.repository.update(id, { disabled: true })
 
             return noContent()
         } catch (err) {
@@ -324,7 +404,8 @@ class PedidoRepository implements IPedidoRepository {
     // multi delete
     async multiDelete(ids: string[]): Promise<HttpResponse> {
         try {
-            await this.repository.delete(ids)
+            // await this.repository.delete(ids)
+            await this.repository.update(ids, { disabled: true })
 
             return noContent()
         } catch (err) {

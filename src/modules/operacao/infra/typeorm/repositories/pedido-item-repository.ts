@@ -121,12 +121,37 @@ class PedidoItemRepository implements IPedidoItemRepository {
             const pedidosItems = await this.repository
                 .createQueryBuilder("ped")
                 .select(['ped.id as "value"', 'ped.pedidoId as "label"'])
-                .where("ped.pedidoId ilike :filter", { filter: `${filter}%` })
+                // .where("ped.pedidoId ilike :filter", { filter: `${filter}%` })
                 .addOrderBy("ped.pedidoId")
                 .getRawMany()
 
             return ok(pedidosItems)
         } catch (err) {
+            console.log("Error in select:", err)
+            return serverError(err)
+        }
+    }
+
+    async selectByPedidoId(filter: string, pedidoId: string): Promise<HttpResponse> {
+        try {
+            let query = this.repository
+                .createQueryBuilder("ped")
+                .select(['ped.id as "value"', "CONCAT(p.nome, ' - ', p.descricao) as \"label\""])
+                .leftJoin("produtos", "p", "p.id :: varchar = ped.produto")
+                .leftJoin("ped.pedidoId", "a")
+                .leftJoin("clientes", "c", "c.id :: varchar = a.cliente")
+                .where("ped.pedidoId = :pedidoId", { pedidoId })
+
+            if (filter) {
+                query = query.andWhere("p.nome ilike :filter", { filter: `${filter}%` })
+                query = query.orWhere("ped.descricao ilike :filter", { filter: `${filter}%` })
+            }
+
+            const pedidosItems = await query.addOrderBy("ped.pedidoId").getRawMany()
+
+            return ok(pedidosItems)
+        } catch (err) {
+            console.log("Error in selectByPedidoId:", err)
             return serverError(err)
         }
     }
@@ -136,12 +161,14 @@ class PedidoItemRepository implements IPedidoItemRepository {
         try {
             const pedidoItem = await this.repository
                 .createQueryBuilder("ped")
-                .select(['ped.id as "value"', 'ped.pedidoId as "label"'])
+                .select(['ped.id as "value"', "CONCAT(p.nome, ' - ', p.descricao) as \"label\""])
+                .leftJoin("produtos", "p", "p.id :: varchar = ped.produto")
                 .where("ped.id = :id", { id: `${id}` })
                 .getRawOne()
 
             return ok(pedidoItem)
         } catch (err) {
+            console.log("Error in idSelect:", err)
             return serverError(err)
         }
     }
@@ -197,6 +224,72 @@ class PedidoItemRepository implements IPedidoItemRepository {
         }
     }
 
+    async getByPedidoIdAndProduto(pedidoId: string, produto: string): Promise<HttpResponse> {
+        try {
+            const pedidoItem = await this.repository
+                .createQueryBuilder("ped")
+                .select([
+                    'ped.id as "id"',
+                    'ped.pedidoId as "pedidoId"',
+                    'a.sequencial as "pedidoSequencial"',
+                    'ped.produto as "produto"',
+                    'ped.quantidade as "quantidade"',
+                    'ped.corEtiqueta as "corEtiqueta"',
+                ])
+                .leftJoin("ped.pedidoId", "a")
+                .where("ped.pedidoId = :pedidoId", { pedidoId })
+                .andWhere("ped.produto = :produto", { produto })
+                .getRawOne()
+
+            return ok(pedidoItem)
+        } catch (err) {
+            console.log("Error in getByPedidoIdAndProduto:", err)
+            return serverError(err)
+        }
+    }
+
+    async getByPedidoId(pedidoId: string): Promise<HttpResponse> {
+        try {
+            const pedidoItems = await this.repository
+                .createQueryBuilder("ped")
+                .select([
+                    'ped.id as "id"',
+                    'ped.pedidoId as "pedidoId"',
+                    'a.sequencial as "pedidoSequencial"',
+                    'ped.produto as "produto"',
+                    'ped.quantidade as "quantidade"',
+                    'ped.corEtiqueta as "corEtiqueta"',
+                ])
+                .leftJoin("ped.pedidoId", "a")
+                .where("ped.pedidoId = :pedidoId", { pedidoId })
+                .getRawMany()
+
+            return ok(pedidoItems)
+        } catch (err) {
+            return serverError(err)
+        }
+    }
+
+    async getProduto(id: string): Promise<HttpResponse> {
+        try {
+            const pedidoItem = await this.repository
+                .createQueryBuilder("ped")
+                .select(['ped.produto as "produto"', 'p.nome as "produtoNome"', 'p.descricao as "produtoDescricao"'])
+                .leftJoin("produtos", "p", "p.id :: varchar = ped.produto")
+                .where("ped.id = :id", { id })
+                .getRawOne()
+
+            if (typeof pedidoItem === "undefined") {
+                return noContent()
+            }
+
+            return ok(pedidoItem)
+        } catch (err) {
+            console.log("Error in getProduto:", err)
+            return serverError(err)
+        }
+    }
+
     // update
     async update({ id, pedidoId, produto, quantidade, corEtiqueta }: IPedidoItemDTO): Promise<HttpResponse> {
         const pedidoItem = await this.repository.findOne(id)
@@ -215,6 +308,33 @@ class PedidoItemRepository implements IPedidoItemRepository {
 
         try {
             await this.repository.save(newpedidoItem)
+
+            return ok(newpedidoItem)
+        } catch (err) {
+            return serverError(err)
+        }
+    }
+
+    async updateWithQueryRunner(
+        { id, pedidoId, produto, quantidade, corEtiqueta }: IPedidoItemDTO,
+        transactionManager: EntityManager
+    ): Promise<HttpResponse> {
+        const pedidoItem = await transactionManager.findOne(PedidoItem, id)
+
+        if (!pedidoItem) {
+            return notFound()
+        }
+
+        const newpedidoItem = transactionManager.create(PedidoItem, {
+            id,
+            pedidoId,
+            produto,
+            quantidade,
+            corEtiqueta,
+        })
+
+        try {
+            await transactionManager.save(PedidoItem, newpedidoItem)
 
             return ok(newpedidoItem)
         } catch (err) {
@@ -241,6 +361,20 @@ class PedidoItemRepository implements IPedidoItemRepository {
     async multiDelete(ids: string[]): Promise<HttpResponse> {
         try {
             await this.repository.delete(ids)
+
+            return noContent()
+        } catch (err) {
+            if (err.message.slice(0, 10) === "null value") {
+                throw new AppError("not null constraint", 404)
+            }
+
+            return serverError(err)
+        }
+    }
+
+    async deleteWithQueryRunner(ids: string[], transactionManager: EntityManager): Promise<HttpResponse> {
+        try {
+            await transactionManager.delete(PedidoItem, ids)
 
             return noContent()
         } catch (err) {

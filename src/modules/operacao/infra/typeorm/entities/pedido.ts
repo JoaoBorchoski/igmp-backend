@@ -47,11 +47,17 @@ class Pedido {
     @Column({ name: "status", nullable: true })
     status?: string
 
+    @Column({ name: "data_emissao", nullable: true })
+    dataEmissao?: Date
+
     @CreateDateColumn({ name: "created_at", nullable: true })
     createdAt?: Date
 
     @UpdateDateColumn({ name: "updated_at", nullable: true })
     updatedAt?: Date
+
+    @Column({ name: "disabled", nullable: true, default: false })
+    disabled?: boolean
 
     constructor() {
         if (!this.id) {

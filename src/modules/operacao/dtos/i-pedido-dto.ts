@@ -12,8 +12,10 @@ interface IPedidoDTO {
     estadoId?: string
     cidadeId?: string
     status?: string
+    dataEmissao?: Date
     createdAt?: Date
     updatedAt?: Date
+    disabled?: boolean
 }
 
 export { IPedidoDTO }

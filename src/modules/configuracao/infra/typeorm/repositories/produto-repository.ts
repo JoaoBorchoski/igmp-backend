@@ -169,9 +169,11 @@ class ProdutoRepository implements IProdutoRepository {
         try {
             const tiposPorta = await this.repository
                 .createQueryBuilder("tip")
-                .select(['tip.id as "value"', 'tip.descricao as "label"'])
-                .where("tip.descricao ilike :filter", { filter: `${filter}%` })
-                .addOrderBy("tip.descricao")
+                .select(['tip.id as "value"', `tip.nome || ' - ' || tip.descricao as "label"`, 'tip.nome as "nome"'])
+                .where("tip.nome ilike :filter", { filter: `%${filter}%` })
+                .orWhere("tip.descricao ilike :filter", { filter: `%${filter}%` })
+                .addOrderBy("tip.nome")
+                .limit(50)
                 .getRawMany()
 
             return ok(tiposPorta)
@@ -185,7 +187,7 @@ class ProdutoRepository implements IProdutoRepository {
         try {
             const tipoPorta = await this.repository
                 .createQueryBuilder("tip")
-                .select(['tip.id as "value"', 'tip.descricao as "label"'])
+                .select(['tip.id as "value"', `tip.nome || ' - ' || tip.descricao as "label"`])
                 .where("tip.id = :id", { id: `${id}` })
                 .getRawOne()
 
@@ -227,6 +229,7 @@ class ProdutoRepository implements IProdutoRepository {
                 .select([
                     'tip.id as "id"',
                     'tip.nome as "nome"',
+                    `tip.nome || ' - ' || tip.descricao as "nomeCompleto"`,
                     'tip.descricao as "descricao", tip.tipo as "tipo", tip.sentidoAbertura as "sentidoAbertura", tip.tipoPorta as "tipoPorta", tip.tipoEnchimento as "tipoEnchimento", tip.fechadura as "fechadura", tip.alturaPorta as "alturaPorta", tip.larguraPorta as "larguraPorta", tip.espessuraPorta as "espessuraPorta", tip.larguraBatatente as "larguraBatatente", tip.espessuraCanalAlizar as "espessuraCanalAlizar"',
                 ])
                 .where("tip.id = :id", { id })
@@ -238,6 +241,7 @@ class ProdutoRepository implements IProdutoRepository {
 
             return ok(tipoPorta)
         } catch (err) {
+            console.log("Error getting tipoPorta:", err)
             return serverError(err)
         }
     }
@@ -299,6 +303,25 @@ class ProdutoRepository implements IProdutoRepository {
         try {
             const produto = await this.repository
                 .createQueryBuilder("prod")
+                .select(['prod.id as "id"', 'prod.nome as "nome"'])
+                .where("prod.nome like :nome", { nome: `%${nome}%` })
+                .orWhere("prod.descricao like :nome", { nome: `%${nome}%` })
+                .getRawOne()
+
+            if (!produto) {
+                return null
+            }
+
+            return ok(produto)
+        } catch (err) {
+            return serverError(err)
+        }
+    }
+
+    async findByNameWithQueryRunner(nome: string, transactionManager: EntityManager): Promise<HttpResponse> {
+        try {
+            const produto = await transactionManager
+                .createQueryBuilder(Produto, "prod")
                 .select(['prod.id as "id"', 'prod.nome as "nome"'])
                 .where("prod.nome like :nome", { nome: `%${nome}%` })
                 .orWhere("prod.descricao like :nome", { nome: `%${nome}%` })

@@ -1,11 +1,13 @@
 import { IUserRepository } from "@modules/authentication/repositories/i-user-repository"
+import { IClienteRepository } from "@modules/configuracao/repositories/i-cliente-repository"
 import { IProdutoRepository } from "@modules/configuracao/repositories/i-produto-repository"
+import { IPedidoItemRepository } from "@modules/operacao/repositories/i-pedido-item-repository"
 import { IPedidoRepository } from "@modules/operacao/repositories/i-pedido-repository"
 import { IProfileRepository } from "@modules/security/repositories/i-profile-repository"
 import { IUserGroupRepository } from "@modules/security/repositories/i-user-group-repository"
 import { IUserProfileRepository } from "@modules/security/repositories/i-user-profile-repository"
 import { AppError } from "@shared/errors/app-error"
-import { HttpResponse, noContent, ok } from "@shared/helpers"
+import { HttpResponse, noContent, ok, serverError } from "@shared/helpers"
 import { hash } from "bcrypt"
 import fs from "fs"
 import moment from "moment"
@@ -30,23 +32,24 @@ class ImportPedidosUseCase {
         @inject("ProfileRepository")
         private profileRepository: IProfileRepository,
         @inject("ProdutoRepository")
-        private produtoRepository: IProdutoRepository
+        private produtoRepository: IProdutoRepository,
+        @inject("PedidoItemRepository")
+        private pedidoItemRepository: IPedidoItemRepository,
+        @inject("ClienteRepository")
+        private clienteRepository: IClienteRepository
     ) {}
 
-    async parseExcelData(row: any): Promise<any> {
-        console.log("Parsing row:", row)
-        const produtoId = await this.produtoRepository.findByName(row["Ordem de embarque"])
+    async parseExcelData(row: any, queryRunner: any): Promise<any> {
+        const produtoId = await this.produtoRepository.findByNameWithQueryRunner(row["Ordem de embarque"], queryRunner)
 
-        if (!produtoId) {
-            return
-        }
-
-        console.log("Produto ID:", produtoId)
+        if (!produtoId) return null
 
         const result = {
             produto: produtoId.data.id,
             quantidade: row["__EMPTY_3"] ? parseInt(row["__EMPTY_3"]) : 0,
         }
+
+        return result
     }
 
     private async parseExcelFile(file: Express.Multer.File): Promise<any[]> {
@@ -77,32 +80,55 @@ class ImportPedidosUseCase {
                 cidade: rows[2]["__EMPTY_5"].split(": ")[1],
             }
 
+            const {
+                data: { id },
+            } = await this.clienteRepository.findByName(cabecalho.cliente)
+
             const pedido = await this.pedidoRepository.createWithQueryRunner(
                 {
                     descricao: cabecalho.pedido,
+                    cliente: id,
+                    dataEmissao: new Date(cabecalho.dataEmissao),
                 },
                 queryRunner.manager
             )
 
-            // console.log("Cabecalho:", cabecalho)
-
-            // console.log("-------------------------------------")
-
             const items = rows.slice(6, rows.length - 2)
 
             for await (const row of items) {
-                const pedidoItem = await this.parseExcelData(row)
-                // console.log(row)
+                let pedidoItemParse = await this.parseExcelData(row, queryRunner.manager)
+
+                if (!pedidoItemParse) {
+                    await this.produtoRepository.createWithQueryRunner(
+                        {
+                            nome: row["Ordem de embarque"],
+                            descricao: row["__EMPTY"],
+                            tipo: 0,
+                        },
+                        queryRunner.manager
+                    )
+                }
+
+                pedidoItemParse = await this.parseExcelData(row, queryRunner.manager)
+
+                await this.pedidoItemRepository.createWithQueryRunner(
+                    {
+                        pedidoId: pedido.data.id,
+                        produto: pedidoItemParse.produto,
+                        quantidade: pedidoItemParse.quantidade,
+                    },
+                    queryRunner.manager
+                )
             }
 
             fs.unlinkSync(file.path)
-            // await queryRunner.commitTransaction()
-            await queryRunner.rollbackTransaction()
+            await queryRunner.commitTransaction()
             return noContent()
         } catch (error) {
+            console.log(error)
             fs.unlinkSync(file.path)
             await queryRunner.rollbackTransaction()
-            return error
+            return serverError(error)
         } finally {
             await queryRunner.release()
         }

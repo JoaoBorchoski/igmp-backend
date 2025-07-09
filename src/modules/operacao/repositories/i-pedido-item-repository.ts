@@ -17,6 +17,8 @@ interface IPedidoItemRepository {
     // select
     select(filter: string): Promise<HttpResponse>
 
+    selectByPedidoId(filter: string, pedidoId: string): Promise<HttpResponse>
+
     // id select
     idSelect(id: string): Promise<HttpResponse>
 
@@ -26,14 +28,27 @@ interface IPedidoItemRepository {
     // get
     get(id: string): Promise<HttpResponse>
 
+    getByPedidoIdAndProduto(pedidoId: string, produto: string): Promise<HttpResponse>
+
+    getByPedidoId(pedidoId: string): Promise<HttpResponse>
+
+    getProduto(id: string): Promise<HttpResponse>
+
     // update
     update(data: IPedidoItemDTO): Promise<HttpResponse>
+
+    updateWithQueryRunner(
+        { id, pedidoId, produto, quantidade, corEtiqueta }: IPedidoItemDTO,
+        transactionManager: EntityManager
+    ): Promise<HttpResponse>
 
     // delete
     delete(id: string): Promise<HttpResponse>
 
     // multi delete
     multiDelete(ids: string[]): Promise<HttpResponse>
+
+    deleteWithQueryRunner(ids: string[], transactionManager: EntityManager): Promise<HttpResponse>
 }
 
 export { IPedidoItemRepository }

@@ -6,10 +6,10 @@ import { ImportProdutoUseCase } from "../import-produto/importo-produto-use-case
 class GetProdutoController {
     async handle(request: Request, response: Response): Promise<Response> {
         const id = request.params.id
-        const getProdutoUseCase = container.resolve(GetProdutoUseCase)
-        const importProdutoUseCase = container.resolve(ImportProdutoUseCase)
 
-        await importProdutoUseCase.execute()
+        console.log("Fetching produto with id:", id)
+
+        const getProdutoUseCase = container.resolve(GetProdutoUseCase)
 
         const tipoPorta = await getProdutoUseCase.execute(id)
 
