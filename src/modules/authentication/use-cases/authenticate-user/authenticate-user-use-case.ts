@@ -50,8 +50,8 @@ class AuthenticateUserUseCase {
             throw new AppError("Email or password incorrect!")
         }
 
-        // console.log('user', user)
-        // console.log('user.password', password)
+        // console.log("user", user)
+        // console.log("user.password", password)
 
         const passwordMatch = await compare(password, user.password)
 

@@ -32,9 +32,17 @@ class PacoteRepository implements IPacoteRepository {
     }
 
     async createWithQueryRunner({ pedidoId, descricao }: IPacoteDTO, transactionManager: EntityManager): Promise<HttpResponse> {
+        const seqAtual = await this.repository
+            .createQueryBuilder("ped")
+            .select("MAX(ped.sequencial) :: INTEGER", "maxSequencial")
+            .getRawOne()
+
+        const sequencial = seqAtual.maxSequencial ? seqAtual.maxSequencial + 1 : 1
+
         const pacote = transactionManager.create(Pacote, {
             pedidoId,
             descricao,
+            sequencial,
         })
 
         const result = await transactionManager
@@ -79,6 +87,7 @@ class PacoteRepository implements IPacoteRepository {
                     'a.id as "pedidoId"',
                     'a.sequencial as "pedidoSequencial"',
                     'pac.descricao as "descricao"',
+                    'pac.sequencial as "sequencial"',
                 ])
                 .leftJoin("pac.pedidoId", "a")
 
@@ -171,8 +180,10 @@ class PacoteRepository implements IPacoteRepository {
                     'pac.pedidoId as "pedidoId"',
                     'a.sequencial as "pedidoSequencial"',
                     'pac.descricao as "descricao"',
+                    "CONCAT(a.sequencial, ' - ', c.nome) as \"pedidoLabel\"",
                 ])
                 .leftJoin("pac.pedidoId", "a")
+                .leftJoin("clientes", "c", "c.id :: varchar = a.cliente")
                 .where("pac.id = :id", { id })
                 .getRawOne()
 
@@ -180,8 +191,31 @@ class PacoteRepository implements IPacoteRepository {
                 return noContent()
             }
 
+            //`tip.nome || ' - ' || tip.descricao as "label"`
+
+            const pacoteItens = await this.repository.query(
+                `
+                SELECT
+                    pi.id,
+                    pi.pacote_id,
+                    pi.produto,
+                    p.nome || ' - ' || p.descricao produto_nome,
+                    pi.quantidade
+                FROM 
+                    pacotes_items pi
+                JOIN 
+                    produtos p ON p.id :: varchar = pi.produto
+                WHERE 
+                    pi.pacote_id = $1
+            `,
+                [pacote.id]
+            )
+
+            pacote.items = pacoteItens
+
             return ok(pacote)
         } catch (err) {
+            console.log(err)
             return serverError(err)
         }
     }
@@ -206,6 +240,27 @@ class PacoteRepository implements IPacoteRepository {
             return ok(newpacote)
         } catch (err) {
             return serverError(err)
+        }
+    }
+
+    async updatePacoteItemStatus(id: string): Promise<HttpResponse> {
+        try {
+            const updated = await this.repository.query(
+                `
+                UPDATE 
+                    pacotes_items
+                SET 
+                    confirmado = true
+                WHERE 
+                    pacote_id = $1
+            `,
+                [id]
+            )
+
+            return ok(updated)
+        } catch (error) {
+            console.log("Error updating pacote item status:", error)
+            return serverError(error)
         }
     }
 
@@ -248,6 +303,27 @@ class PacoteRepository implements IPacoteRepository {
                 .getRawOne()
 
             return ok(count)
+        } catch (err) {
+            return serverError(err)
+        }
+    }
+
+    async getPacoteColor(): Promise<HttpResponse> {
+        try {
+            const color = await this.repository.query(`
+                    SELECT
+                        description
+                    FROM
+                        configs
+                    WHERE
+                        title = 'cores'
+                `)
+
+            if (!color) {
+                return notFound()
+            }
+
+            return ok(color)
         } catch (err) {
             return serverError(err)
         }

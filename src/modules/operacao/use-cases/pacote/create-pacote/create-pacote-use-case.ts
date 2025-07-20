@@ -116,7 +116,7 @@ class CreatePacoteUseCase {
 
             const qrCodeDados = {
                 pacoteId: result.data.id,
-                // pedidoId: pedido.data.id,
+                pedidoId: pedido?.data?.id ?? null,
                 descricao: result.data.descricao,
             }
 
@@ -129,7 +129,22 @@ class CreatePacoteUseCase {
                 },
             })
 
-            const browser = await puppeteer.launch()
+            const browser = await puppeteer.launch({
+                headless: true,
+                executablePath: "/usr/bin/chromium-browser",
+                args: ["--no-sandbox", "--disable-setuid-sandbox"],
+            })
+
+            let qrCodeColor = ""
+
+            const colors = await this.pacoteRepository.getPacoteColor()
+
+            if (colors.data[0].description.clientes[pedido.data.cliente]) {
+                qrCodeColor = colors.data[0].description.clientes[pedido.data.cliente]
+            } else {
+                qrCodeColor = "#6495ED" // Default color if not found
+            }
+
             const htmlContent = `
                 <html>
                     <head>
@@ -165,7 +180,7 @@ class CreatePacoteUseCase {
                             </ul>
                             <div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 300px;">
                                 <div style="width: 50%; display: flex; justify-content: center; align-items: center;">
-                                    <div style="width: 250px; height: 250px; background-color: #6495ED; border-radius: 50%; display: flex; justify-content: center; align-items: center;">
+                                    <div style="width: 250px; height: 250px; background-color: ${qrCodeColor}; border-radius: 50%; display: flex; justify-content: center; align-items: center;">
                                         <img src="${qrcode}" alt="QR Code" style="width: 80%; height: auto;" />
                                     </div>
                                 </div>
@@ -219,8 +234,8 @@ class CreatePacoteUseCase {
 
             await browser.close()
 
-            // await queryRunner.commitTransaction()
-            await queryRunner.rollbackTransaction()
+            // await queryRunner.rollbackTransaction()
+            await queryRunner.commitTransaction()
 
             return ok(pdfBuffer)
         } catch (error) {

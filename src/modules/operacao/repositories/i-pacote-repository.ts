@@ -33,6 +33,10 @@ interface IPacoteRepository {
     multiDelete(ids: string[]): Promise<HttpResponse>
 
     getNumeroPacotesByPedidoId(pedidoId: string): Promise<HttpResponse>
+
+    updatePacoteItemStatus(id: string): Promise<HttpResponse>
+
+    getPacoteColor(): Promise<HttpResponse>
 }
 
 export { IPacoteRepository }
