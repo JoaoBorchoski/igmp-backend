@@ -139,10 +139,10 @@ class CreatePacoteUseCase {
 
             const colors = await this.pacoteRepository.getPacoteColor()
 
-            if (colors.data[0].description.clientes[pedido.data.cliente]) {
-                qrCodeColor = colors.data[0].description.clientes[pedido.data.cliente]
+            if (colors.data[0].description.clientes[pedido.data.clienteDocumento]) {
+                qrCodeColor = colors.data[0].description.clientes[pedido.data.clienteDocumento]
             } else {
-                qrCodeColor = "#6495ED" // Default color if not found
+                qrCodeColor = "#0088ffff"
             }
 
             const htmlContent = `

@@ -1,13 +1,10 @@
 import { Request, Response } from "express"
 import { container } from "tsyringe"
 import { GetProdutoUseCase } from "./get-produto-use-case"
-import { ImportProdutoUseCase } from "../import-produto/importo-produto-use-case"
 
 class GetProdutoController {
     async handle(request: Request, response: Response): Promise<Response> {
         const id = request.params.id
-
-        console.log("Fetching produto with id:", id)
 
         const getProdutoUseCase = container.resolve(GetProdutoUseCase)
 

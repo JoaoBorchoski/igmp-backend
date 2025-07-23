@@ -84,6 +84,10 @@ class ImportPedidosUseCase {
                 data: { id },
             } = await this.clienteRepository.findByName(cabecalho.cliente)
 
+            if (!id) {
+                throw new AppError("Cliente não encontrado")
+            }
+
             const pedido = await this.pedidoRepository.createWithQueryRunner(
                 {
                     descricao: cabecalho.pedido,

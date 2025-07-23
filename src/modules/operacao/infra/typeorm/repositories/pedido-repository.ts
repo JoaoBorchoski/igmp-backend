@@ -245,6 +245,8 @@ class PedidoRepository implements IPedidoRepository {
                     'ped.id as "id"',
                     'ped.sequencial as "sequencial"',
                     'ped.cliente as "cliente"',
+                    'c.nome as "clienteNome"',
+                    'c.cpf as "clienteDocumento"',
                     'ped.telefone as "telefone"',
                     'ped.cep as "cep"',
                     'ped.endereco as "endereco"',
@@ -261,6 +263,7 @@ class PedidoRepository implements IPedidoRepository {
                 ])
                 .leftJoin("ped.estadoId", "a")
                 .leftJoin("ped.cidadeId", "b")
+                .leftJoin("clientes", "c", "c.id :: varchar = ped.cliente")
                 .where("ped.id = :id", { id })
                 .getRawOne()
 

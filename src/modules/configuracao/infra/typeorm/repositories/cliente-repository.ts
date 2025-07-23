@@ -174,6 +174,7 @@ class ClienteRepository implements IClienteRepository {
                 .createQueryBuilder("cli")
                 .select(['cli.id as "value"', 'cli.nome as "label"'])
                 .where("cli.nome ilike :filter", { filter: `${filter}%` })
+                .orWhere("cli.cpf ilike :filter", { filter: `${filter}%` })
                 .addOrderBy("cli.nome")
                 .limit(50)
                 .getRawMany()
@@ -374,6 +375,21 @@ class ClienteRepository implements IClienteRepository {
         } catch (err) {
             return serverError(err)
         }
+    }
+
+    async getByCpf(cpf: string): Promise<HttpResponse> {
+        return this.repository
+            .createQueryBuilder("cli")
+            .select(['cli.id as "id"', 'cli.nome as "nome"', 'cli.cpf as "cpf"'])
+            .where("cli.cpf = :cpf", { cpf })
+            .getRawOne()
+            .then((cliente) => {
+                if (!cliente) {
+                    return noContent()
+                }
+                return ok(cliente)
+            })
+            .catch((err) => serverError(err))
     }
 }
 

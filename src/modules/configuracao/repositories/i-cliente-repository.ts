@@ -53,6 +53,8 @@ interface IClienteRepository {
     multiDelete(ids: string[]): Promise<HttpResponse>
 
     findByName(nome: string): Promise<HttpResponse>
+
+    getByCpf(cpf: string): Promise<HttpResponse>
 }
 
 export { IClienteRepository }
