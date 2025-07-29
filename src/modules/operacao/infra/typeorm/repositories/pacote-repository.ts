@@ -99,6 +99,7 @@ class PacoteRepository implements IPacoteRepository {
                 .andWhere(
                     new Brackets((query) => {
                         query.andWhere("CAST(a.sequencial AS VARCHAR) ilike :search", { search: `%${search}%` })
+                        query.orWhere("CAST(pac.sequencial AS VARCHAR) ilike :search", { search: `%${search}%` })
                         query.orWhere("CAST(pac.descricao AS VARCHAR) ilike :search", { search: `%${search}%` })
                     })
                 )
@@ -190,8 +191,6 @@ class PacoteRepository implements IPacoteRepository {
             if (typeof pacote === "undefined") {
                 return noContent()
             }
-
-            //`tip.nome || ' - ' || tip.descricao as "label"`
 
             const pacoteItens = await this.repository.query(
                 `
@@ -290,6 +289,29 @@ class PacoteRepository implements IPacoteRepository {
                 throw new AppError("not null constraint", 404)
             }
 
+            return serverError(err)
+        }
+    }
+
+    async deleteWithQueryRunner(id: string, transactionManager: EntityManager): Promise<HttpResponse> {
+        try {
+            await transactionManager.query(
+                `
+                DELETE FROM 
+                    pacotes_items
+                WHERE 
+                    pacote_id = $1
+            `,
+                [id]
+            )
+
+            await transactionManager.delete(Pacote, id)
+
+            return noContent()
+        } catch (err) {
+            if (err.message.slice(0, 10) === "null value") {
+                throw new AppError("not null constraint", 404)
+            }
             return serverError(err)
         }
     }

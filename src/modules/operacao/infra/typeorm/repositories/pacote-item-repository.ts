@@ -204,6 +204,31 @@ class PacoteItemRepository implements IPacoteItemRepository {
             return serverError(err)
         }
     }
+
+    async getQuantidadeByPedidoIdAndProdutoIdWithQueryRunner(
+        pedidoId: string,
+        produtoId: string,
+        transactionManager: EntityManager
+    ): Promise<HttpResponse> {
+        try {
+            const pacoteItem = await transactionManager
+                .createQueryBuilder(PacoteItem, "pac")
+                .select(['SUM(pac.quantidade) :: float as "quantidadeUsada"'])
+                .leftJoin("pac.pacoteId", "a")
+                .where("a.pedidoId = :pedidoId", { pedidoId })
+                .andWhere("pac.produto = :produtoId", { produtoId })
+                .getRawOne()
+
+            if (typeof pacoteItem === "undefined") {
+                return noContent()
+            }
+
+            return ok(pacoteItem)
+        } catch (err) {
+            return serverError(err)
+        }
+    }
+
     // update
     async update({ id, pacoteId, produto, quantidade }: IPacoteItemDTO): Promise<HttpResponse> {
         const pacoteItem = await this.repository.findOne(id)

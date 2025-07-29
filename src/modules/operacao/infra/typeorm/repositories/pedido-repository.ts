@@ -202,12 +202,14 @@ class PedidoRepository implements IPedidoRepository {
         try {
             const pedido = await this.repository
                 .createQueryBuilder("ped")
-                .select(['ped.id as "value"', 'ped.sequencial as "label"'])
+                .select(['ped.id as "value"', "CONCAT(ped.sequencial, ' - ', c.nome) as \"label\""])
+                .leftJoin("clientes", "c", "c.id :: varchar = ped.cliente")
                 .where("ped.id = :id", { id: `${id}` })
                 .getRawOne()
 
             return ok(pedido)
         } catch (err) {
+            console.error("Error in PedidoRepository.idSelect:", err)
             return serverError(err)
         }
     }

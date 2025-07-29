@@ -32,6 +32,8 @@ interface IPacoteRepository {
     // multi delete
     multiDelete(ids: string[]): Promise<HttpResponse>
 
+    deleteWithQueryRunner(id: string, transactionManager: EntityManager): Promise<HttpResponse>
+
     getNumeroPacotesByPedidoId(pedidoId: string): Promise<HttpResponse>
 
     updatePacoteItemStatus(id: string): Promise<HttpResponse>

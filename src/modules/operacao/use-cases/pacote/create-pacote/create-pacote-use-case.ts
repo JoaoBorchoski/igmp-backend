@@ -187,7 +187,6 @@ class CreatePacoteUseCase {
 
                                 <div style="width: 50%; text-align: center;">
                                     <div>
-                                        <h1>Lote ...</h1>
                                         <h1>${(() => {
                                             if (!pedido.data) {
                                                 return new Date().toLocaleDateString("pt-BR", {

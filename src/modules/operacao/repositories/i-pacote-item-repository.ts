@@ -28,6 +28,12 @@ interface IPacoteItemRepository {
 
     getQuantidadeByPedidoIdAndProdutoId(pedidoId: string, produtoId: string): Promise<HttpResponse>
 
+    getQuantidadeByPedidoIdAndProdutoIdWithQueryRunner(
+        pedidoId: string,
+        produtoId: string,
+        transactionManager: EntityManager
+    ): Promise<HttpResponse>
+
     // update
     update(data: IPacoteItemDTO): Promise<HttpResponse>
 
