@@ -170,7 +170,7 @@ class CreatePacoteUseCase {
                     </head>
                     <body>
                         <div>
-                            <h3 class="nome">IGM PRESTAÇÃO DE SERVIÇOS LTDA/CNPJ: 13.482.569/0001-82</h3>
+                            <h3 class="nome">IGMP PORTAS E ESQUADRIAS LTDA/CNPJ: 47.673.906/0001-30</h3>
                             <ul>
                                 ${itemsCriados
                                     .map((item) => {
@@ -187,6 +187,7 @@ class CreatePacoteUseCase {
 
                                 <div style="width: 50%; text-align: center;">
                                     <div>
+                                        ${pedido.data.clienteNome ? `<h1>LOTE ${pedido.data.clienteNome}</h1>` : ""}
                                         <h1>${(() => {
                                             if (!pedido.data) {
                                                 return new Date().toLocaleDateString("pt-BR", {
