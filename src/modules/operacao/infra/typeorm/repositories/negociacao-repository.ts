@@ -14,7 +14,7 @@ class NegociacaoRepository implements INegociacaoRepository {
 
 
   // create
-  async create ({
+  async create({
     medicaoId,
     clienteId,
     statusNegociacaoId,
@@ -23,7 +23,8 @@ class NegociacaoRepository implements INegociacaoRepository {
     dataFechamento,
     valorEstimado,
     descricao,
-    motivoPerda
+    motivoPerda,
+    status
   }: INegociacaoDTO): Promise<HttpResponse> {
     const negociacao = this.repository.create({
       medicaoId,
@@ -34,7 +35,8 @@ class NegociacaoRepository implements INegociacaoRepository {
       dataFechamento,
       valorEstimado,
       descricao,
-      motivoPerda
+      motivoPerda,
+      status
     })
 
     const result = await this.repository.save(negociacao)
@@ -50,17 +52,19 @@ class NegociacaoRepository implements INegociacaoRepository {
 
 
   // list
-  async list (
+  async list(
     search: string,
     page: number,
     rowsPerPage: number,
     order: string,
     filter: string
   ): Promise<HttpResponse> {
+    console.log(search, page, rowsPerPage, order, filter)
+
     let columnName: string
     let columnDirection: 'ASC' | 'DESC'
 
-    if ((typeof(order) === 'undefined') || (order === "")) {
+    if ((typeof (order) === 'undefined') || (order === "")) {
       columnName = 'nome'
       columnDirection = 'ASC'
     } else {
@@ -82,7 +86,14 @@ class NegociacaoRepository implements INegociacaoRepository {
       let query = this.repository.createQueryBuilder('neg')
         .select([
           'neg.id as "id"',
+          'neg.descricao as "descricao"',
+          'neg.status as "status"',
+          'TO_CHAR(neg.dataCriacao, \'DD/MM/YYYY\') as "dataCriacao"',
+          'neg.valorEstimado as "valorEstimado"',
+          'neg.clienteId as "clienteId"',
+          'b.nome as "clienteNome"',
         ])
+        .leftJoin('neg.clienteId', 'b')
 
       if (filter) {
         query = query
@@ -91,22 +102,29 @@ class NegociacaoRepository implements INegociacaoRepository {
 
       const negociacoes = await query
         .andWhere(new Brackets(query => {
-          query.andWhere('CAST(neg. AS VARCHAR) ilike :search', { search: `%${search}%` })
+          query.andWhere('CAST(neg.descricao AS VARCHAR) ilike :search', { search: `%${search}%` })
+          query.andWhere('CAST(b.nome AS VARCHAR) ilike :search', { search: `%${search}%` })
+          query.andWhere('CAST(neg.status AS VARCHAR) ilike :search', { search: `%${search}%` })
+          query.andWhere('CAST(neg.valorEstimado AS VARCHAR) ilike :search', { search: `%${search}%` })
+          query.andWhere('CAST(neg.dataCriacao AS VARCHAR) ilike :search', { search: `%${search}%` })
         }))
         .offset(offset)
         .limit(rowsPerPage)
         .take(rowsPerPage)
         .getRawMany()
 
+      console.log(negociacoes)
+
       return ok(negociacoes)
     } catch (err) {
+      console.log(err)
       return serverError(err)
     }
   }
 
 
   // select
-  async select (filter: string): Promise<HttpResponse> {
+  async select(filter: string): Promise<HttpResponse> {
     try {
       const negociacoes = await this.repository.createQueryBuilder('neg')
         .select([
@@ -125,7 +143,7 @@ class NegociacaoRepository implements INegociacaoRepository {
 
 
   // id select
-  async idSelect (id: string): Promise<HttpResponse> {
+  async idSelect(id: string): Promise<HttpResponse> {
     try {
       const negociacao = await this.repository.createQueryBuilder('neg')
         .select([
@@ -143,7 +161,7 @@ class NegociacaoRepository implements INegociacaoRepository {
 
 
   // count
-  async count (
+  async count(
     search: string,
     filter: string
   ): Promise<HttpResponse> {
@@ -172,7 +190,7 @@ class NegociacaoRepository implements INegociacaoRepository {
 
 
   // get
-  async get (id: string): Promise<HttpResponse> {
+  async get(id: string): Promise<HttpResponse> {
     try {
       const negociacao = await this.repository.createQueryBuilder('neg')
         .select([
@@ -212,7 +230,7 @@ class NegociacaoRepository implements INegociacaoRepository {
 
 
   // update
-  async update ({
+  async update({
     id,
     medicaoId,
     clienteId,
@@ -254,13 +272,13 @@ class NegociacaoRepository implements INegociacaoRepository {
 
 
   // delete
-  async delete (id: string): Promise<HttpResponse> {
+  async delete(id: string): Promise<HttpResponse> {
     try {
       await this.repository.delete(id)
 
       return noContent()
     } catch (err) {
-      if(err.message.slice(0, 10) === 'null value') {
+      if (err.message.slice(0, 10) === 'null value') {
         throw new AppError('not null constraint', 404)
       }
 
@@ -270,13 +288,13 @@ class NegociacaoRepository implements INegociacaoRepository {
 
 
   // multi delete
-  async multiDelete (ids: string[]): Promise<HttpResponse> {
+  async multiDelete(ids: string[]): Promise<HttpResponse> {
     try {
       await this.repository.delete(ids)
 
       return noContent()
     } catch (err) {
-      if(err.message.slice(0, 10) === 'null value') {
+      if (err.message.slice(0, 10) === 'null value') {
         throw new AppError('not null constraint', 404)
       }
 

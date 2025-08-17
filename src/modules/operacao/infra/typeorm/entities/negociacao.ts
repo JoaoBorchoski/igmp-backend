@@ -48,6 +48,9 @@ class Negociacao {
   @UpdateDateColumn({ name: "updated_at", nullable: true })
   updatedAt?: Date
 
+  @Column({ name: "status", nullable: true })
+  status?: string
+
   constructor() {
     if (!this.id) {
       this.id = uuidV4()

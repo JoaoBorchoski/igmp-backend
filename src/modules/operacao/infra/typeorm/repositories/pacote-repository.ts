@@ -219,6 +219,51 @@ class PacoteRepository implements IPacoteRepository {
         }
     }
 
+    async getProdutoInfo(pedidoItemId: string, pedidoId: string): Promise<HttpResponse> {
+        try {
+            const pacote = await this.repository.query(
+                `
+                    SELECT 
+                        pi.quantidade :: integer as quantidade,
+                        pi.produto
+                    FROM 
+                        pedidos_items pi
+                    WHERE 
+                        pi.id = $1
+                `,
+                [pedidoItemId]
+            )
+
+            if (!pacote) {
+                return notFound()
+            }
+
+            const quantidadeUsada = await this.repository.query(
+                `
+                    SELECT 
+                        SUM(pac.quantidade) :: float as quantidade_usada
+                    FROM 
+                        pacotes_items pac
+                    JOIN 
+                        pacotes p ON p.id = pac.pacote_id
+                    JOIN
+                        pedidos_items pi ON pi.id = $2
+                    WHERE 
+                        p.pedido_id = $1
+                `,
+                [pedidoId, pedidoItemId]
+            )
+
+            const quantidadeDisponivel = pacote[0].quantidade - quantidadeUsada[0].quantidade_usada
+
+            pacote[0].quantidadeDisponivel = quantidadeDisponivel
+
+            return ok(pacote[0])
+        } catch (err) {
+            return serverError(err)
+        }
+    }
+
     // update
     async update({ id, pedidoId, descricao }: IPacoteDTO): Promise<HttpResponse> {
         const pacote = await this.repository.findOne(id)

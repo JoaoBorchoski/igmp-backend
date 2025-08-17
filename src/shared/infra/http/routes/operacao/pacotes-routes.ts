@@ -10,6 +10,7 @@ import { DeletePacoteController } from "@modules/operacao/use-cases/pacote/delet
 import { MultiDeletePacoteController } from "@modules/operacao/use-cases/pacote/multi-delete-pacote/multi-delete-pacote-controller"
 import { ensureAuthenticated } from "@shared/infra/http/middlewares/ensure-authenticated"
 import { ConfirmaCarregamentoPacoteController } from "@modules/operacao/use-cases/pacote/confirma-carregamento-pacote/update-pacote-controller"
+import { GetPacoteProdutoInfoController } from "@modules/operacao/use-cases/pacote/get-pacote-produto-info/get-pacote-produto-info-controller"
 
 const pacotesRoutes = Router()
 
@@ -23,6 +24,7 @@ const updatePacoteController = new UpdatePacoteController()
 const deletePacoteController = new DeletePacoteController()
 const multiDeletePacoteController = new MultiDeletePacoteController()
 const confirmaCarregamentoPacoteController = new ConfirmaCarregamentoPacoteController()
+const getPacoteProdutoInfoController = new GetPacoteProdutoInfoController()
 
 pacotesRoutes.post("/", ensureAuthenticated, createPacoteController.handle)
 pacotesRoutes.post("/list", ensureAuthenticated, listPacoteController.handle)
@@ -30,6 +32,7 @@ pacotesRoutes.post("/count", ensureAuthenticated, countPacoteController.handle)
 pacotesRoutes.get("/select/:id", ensureAuthenticated, idSelectPacoteController.handle)
 pacotesRoutes.get("/select", ensureAuthenticated, selectPacoteController.handle)
 pacotesRoutes.get("/:id", ensureAuthenticated, getPacoteController.handle)
+pacotesRoutes.get("/produto-info/:produtoId/:pedidoId", ensureAuthenticated, getPacoteProdutoInfoController.handle)
 pacotesRoutes.put("/:id", ensureAuthenticated, updatePacoteController.handle)
 pacotesRoutes.get("/confirma-carregamento/:id", ensureAuthenticated, confirmaCarregamentoPacoteController.handle)
 pacotesRoutes.delete("/:id", ensureAuthenticated, deletePacoteController.handle)

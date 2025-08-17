@@ -23,6 +23,8 @@ interface IPacoteRepository {
     // get
     get(id: string): Promise<HttpResponse>
 
+    getProdutoInfo(produtoId: string, pedidoId: string): Promise<HttpResponse>
+
     // update
     update(data: IPacoteDTO): Promise<HttpResponse>
 

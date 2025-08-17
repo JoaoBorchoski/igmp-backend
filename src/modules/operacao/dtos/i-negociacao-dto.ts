@@ -11,6 +11,7 @@ interface INegociacaoDTO {
   motivoPerda?: string
   createdAt?: Date
   updatedAt?: Date
+  status?: string
 }
 
 export { INegociacaoDTO }

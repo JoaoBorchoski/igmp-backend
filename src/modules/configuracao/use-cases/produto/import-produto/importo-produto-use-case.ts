@@ -50,9 +50,9 @@ class ImportProdutoUseCase {
                 //Cliente import logic
                 const estado = await this.estadoRepository.getByName(row.estado)
                 const cidade = await this.cidadeRepository.getByName(row.cidade, estado.data.id)
-                console.log("Estado:", estado)
-                console.log("Cidade:", cidade)
-                console.log("Row:", row)
+                // console.log("Estado:", estado)
+                // console.log("Cidade:", cidade)
+                // console.log("Row:", row)
                 await this.clienteRepository.createWithQueryRunner(
                     {
                         nome: row.nome,
