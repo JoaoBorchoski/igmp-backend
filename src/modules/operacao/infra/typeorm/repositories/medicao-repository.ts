@@ -96,8 +96,6 @@ class MedicaoRepository implements IMedicaoRepository {
         .take(rowsPerPage)
         .getRawMany()
 
-      console.log(medicoes)
-
       return ok(medicoes)
     } catch (err) {
       console.log(err.message, err.stack)

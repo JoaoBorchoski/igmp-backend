@@ -7,7 +7,7 @@ interface IPedidoItemRepository {
     create(data: IPedidoItemDTO): Promise<HttpResponse>
 
     createWithQueryRunner(
-        { pedidoId, produto, quantidade, corEtiqueta }: IPedidoItemDTO,
+        { pedidoId, produto, quantidade, corEtiqueta, kit }: IPedidoItemDTO,
         transactionManager: EntityManager
     ): Promise<HttpResponse>
 

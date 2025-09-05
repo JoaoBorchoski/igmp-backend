@@ -39,6 +39,8 @@ interface IProdutoRepository {
     // get
     get(id: string): Promise<HttpResponse>
 
+    getWithQueryRunner(id: string, transactionManager: EntityManager): Promise<HttpResponse>
+
     // update
     update(data: IProdutoDTO): Promise<HttpResponse>
 

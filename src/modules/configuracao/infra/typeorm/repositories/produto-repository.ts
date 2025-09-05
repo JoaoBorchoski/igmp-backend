@@ -246,6 +246,30 @@ class ProdutoRepository implements IProdutoRepository {
         }
     }
 
+    async getWithQueryRunner(id: string, transactionManager: EntityManager): Promise<HttpResponse> {
+        try {
+            const produto = await transactionManager
+                .createQueryBuilder(Produto, "prod")
+                .select([
+                    'prod.id as "id"',
+                    'prod.nome as "nome"',
+                    `prod.nome || ' - ' || prod.descricao as "nomeCompleto"`,
+                    'prod.descricao as "descricao", prod.tipo as "tipo", prod.sentidoAbertura as "sentidoAbertura", prod.tipoPorta as "tipoPorta", prod.tipoEnchimento as "tipoEnchimento", prod.fechadura as "fechadura", prod.alturaPorta as "alturaPorta", prod.larguraPorta as "larguraPorta", prod.espessuraPorta as "espessuraPorta", prod.larguraBatatente as "larguraBatatente", prod.espessuraCanalAlizar as "espessuraCanalAlizar"',
+                ])
+                .where("prod.id = :id", { id })
+                .getRawOne()
+
+            if (typeof produto === "undefined") {
+                return noContent()
+            }
+
+            return ok(produto)
+        } catch (err) {
+            console.log("Error getting produto:", err)
+            return serverError(err)
+        }
+    }
+
     // update
     async update({ id, nome, descricao }: ITipoPortaDTO): Promise<HttpResponse> {
         const tipoPorta = await this.repository.findOne(id)
@@ -322,7 +346,7 @@ class ProdutoRepository implements IProdutoRepository {
         try {
             const produto = await transactionManager
                 .createQueryBuilder(Produto, "prod")
-                .select(['prod.id as "id"', 'prod.nome as "nome"'])
+                .select(['prod.id as "id"', 'prod.nome as "nome"', 'prod.descricao as "descricao"'])
                 .where("prod.nome like :nome", { nome: `%${nome}%` })
                 .orWhere("prod.descricao like :nome", { nome: `%${nome}%` })
                 .getRawOne()

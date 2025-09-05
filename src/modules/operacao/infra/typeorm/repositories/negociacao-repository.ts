@@ -59,8 +59,6 @@ class NegociacaoRepository implements INegociacaoRepository {
     order: string,
     filter: string
   ): Promise<HttpResponse> {
-    console.log(search, page, rowsPerPage, order, filter)
-
     let columnName: string
     let columnDirection: 'ASC' | 'DESC'
 
@@ -88,8 +86,9 @@ class NegociacaoRepository implements INegociacaoRepository {
           'neg.id as "id"',
           'neg.descricao as "descricao"',
           'neg.status as "status"',
-          'TO_CHAR(neg.dataCriacao, \'DD/MM/YYYY\') as "dataCriacao"',
-          'neg.valorEstimado as "valorEstimado"',
+          'TO_CHAR(neg.dataCriacao, \'DD/MM/YYYY\') as "dataCriacaoFormatted"',
+          'neg.dataCriacao as "dataCriacao"',
+          'ROUND(CAST("neg"."valor_estimado" AS NUMERIC), 2) as "valorEstimado"',
           'neg.clienteId as "clienteId"',
           'b.nome as "clienteNome"',
         ])
@@ -102,18 +101,16 @@ class NegociacaoRepository implements INegociacaoRepository {
 
       const negociacoes = await query
         .andWhere(new Brackets(query => {
-          query.andWhere('CAST(neg.descricao AS VARCHAR) ilike :search', { search: `%${search}%` })
-          query.andWhere('CAST(b.nome AS VARCHAR) ilike :search', { search: `%${search}%` })
-          query.andWhere('CAST(neg.status AS VARCHAR) ilike :search', { search: `%${search}%` })
-          query.andWhere('CAST(neg.valorEstimado AS VARCHAR) ilike :search', { search: `%${search}%` })
-          query.andWhere('CAST(neg.dataCriacao AS VARCHAR) ilike :search', { search: `%${search}%` })
+          query.orWhere('CAST(neg.descricao AS VARCHAR) ilike :search', { search: `%${search}%` })
+          query.orWhere('CAST(b.nome AS VARCHAR) ilike :search', { search: `%${search}%` })
+          query.orWhere('CAST(neg.status AS VARCHAR) ilike :search', { search: `%${search}%` })
+          query.orWhere('CAST(neg.valorEstimado AS VARCHAR) ilike :search', { search: `%${search}%` })
+          query.orWhere('CAST(neg.dataCriacao AS VARCHAR) ilike :search', { search: `%${search}%` })
         }))
         .offset(offset)
         .limit(rowsPerPage)
         .take(rowsPerPage)
         .getRawMany()
-
-      console.log(negociacoes)
 
       return ok(negociacoes)
     } catch (err) {
@@ -240,7 +237,8 @@ class NegociacaoRepository implements INegociacaoRepository {
     dataFechamento,
     valorEstimado,
     descricao,
-    motivoPerda
+    motivoPerda,
+    status
   }: INegociacaoDTO): Promise<HttpResponse> {
     const negociacao = await this.repository.findOne(id)
 
@@ -258,7 +256,8 @@ class NegociacaoRepository implements INegociacaoRepository {
       dataFechamento,
       valorEstimado,
       descricao,
-      motivoPerda
+      motivoPerda,
+      status
     })
 
     try {
@@ -266,6 +265,7 @@ class NegociacaoRepository implements INegociacaoRepository {
 
       return ok(newnegociacao)
     } catch (err) {
+      console.log(err)
       return serverError(err)
     }
   }

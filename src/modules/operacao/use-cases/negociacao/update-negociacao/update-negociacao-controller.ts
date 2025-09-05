@@ -13,7 +13,8 @@ class UpdateNegociacaoController {
       dataFechamento,
       valorEstimado,
       descricao,
-      motivoPerda
+      motivoPerda,
+      status
     } = request.body
 
     const { id } = request.params
@@ -21,17 +22,18 @@ class UpdateNegociacaoController {
     const updateNegociacaoUseCase = container.resolve(UpdateNegociacaoUseCase)
 
     const result = await updateNegociacaoUseCase.execute({
-        id,
-        medicaoId,
-        clienteId,
-        statusNegociacaoId,
-        funcionarioId,
-        dataCriacao,
-        dataFechamento,
-        valorEstimado,
-        descricao,
-        motivoPerda
-      })
+      id,
+      medicaoId,
+      clienteId,
+      statusNegociacaoId,
+      funcionarioId,
+      dataCriacao,
+      dataFechamento,
+      valorEstimado,
+      descricao,
+      motivoPerda,
+      status
+    })
       .then(negociacaoResult => {
         return negociacaoResult
       })

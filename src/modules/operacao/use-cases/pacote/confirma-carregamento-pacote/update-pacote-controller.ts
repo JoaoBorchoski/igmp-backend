@@ -6,8 +6,6 @@ class ConfirmaCarregamentoPacoteController {
     async handle(request: Request, response: Response): Promise<Response> {
         const { id } = request.params
 
-        // console.log("ConfirmaCarregamentoPacoteController - ID:", id)
-
         const confirmaCarregamentoPacoteUseCase = container.resolve(ConfirmaCarregamentoPacoteUseCase)
 
         const result = await confirmaCarregamentoPacoteUseCase

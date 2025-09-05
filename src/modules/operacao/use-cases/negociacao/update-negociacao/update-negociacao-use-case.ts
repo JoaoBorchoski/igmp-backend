@@ -15,13 +15,14 @@ interface IRequest {
   valorEstimado: number
   descricao: string
   motivoPerda: string
+  status: string
 }
 
 @injectable()
 class UpdateNegociacaoUseCase {
   constructor(@inject('NegociacaoRepository')
-    private negociacaoRepository: INegociacaoRepository
-  ) {}
+  private negociacaoRepository: INegociacaoRepository
+  ) { }
 
   async execute({
     id,
@@ -33,7 +34,8 @@ class UpdateNegociacaoUseCase {
     dataFechamento,
     valorEstimado,
     descricao,
-    motivoPerda
+    motivoPerda,
+    status
   }: IRequest): Promise<HttpResponse> {
     const negociacao = await this.negociacaoRepository.update({
       id,
@@ -45,7 +47,8 @@ class UpdateNegociacaoUseCase {
       dataFechamento,
       valorEstimado,
       descricao,
-      motivoPerda
+      motivoPerda,
+      status
     })
 
     return negociacao

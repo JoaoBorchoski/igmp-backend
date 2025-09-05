@@ -13,12 +13,13 @@ class PedidoItemRepository implements IPedidoItemRepository {
     }
 
     // create
-    async create({ pedidoId, produto, quantidade, corEtiqueta }: IPedidoItemDTO): Promise<HttpResponse> {
+    async create({ pedidoId, produto, quantidade, corEtiqueta, kit }: IPedidoItemDTO): Promise<HttpResponse> {
         const pedidoItem = this.repository.create({
             pedidoId,
             produto,
             quantidade,
             corEtiqueta,
+            kit,
         })
 
         const result = await this.repository
@@ -34,7 +35,7 @@ class PedidoItemRepository implements IPedidoItemRepository {
     }
 
     async createWithQueryRunner(
-        { pedidoId, produto, quantidade, corEtiqueta }: IPedidoItemDTO,
+        { pedidoId, produto, quantidade, corEtiqueta, kit }: IPedidoItemDTO,
         transactionManager: EntityManager
     ): Promise<HttpResponse> {
         const pedidoItem = transactionManager.create(PedidoItem, {
@@ -42,6 +43,7 @@ class PedidoItemRepository implements IPedidoItemRepository {
             produto,
             quantidade,
             corEtiqueta,
+            kit,
         })
 
         const result = await transactionManager
