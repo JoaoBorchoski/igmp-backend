@@ -14,10 +14,66 @@ import { hash } from "bcrypt"
 import fs from "fs"
 import moment from "moment"
 import { inject, injectable } from "tsyringe"
-import { getConnection } from "typeorm"
+import { getConnection, QueryRunner } from "typeorm"
 import xlsx from "xlsx"
 import QRCode from "qrcode"
 import puppeteer from "puppeteer"
+
+// Tipagens para os dados do Excel
+interface ExcelRow {
+    "Ordem de embarque": string | number
+    __EMPTY: string | number
+    __EMPTY_2: string | number
+    __EMPTY_3: string | number
+    __EMPTY_5: string | number
+    [key: string]: any
+}
+
+// Tipagem para o resultado do parse de um item do Excel
+interface ParsedPedidoItem {
+    produto: string
+    produtoNome: string
+    quantidade: number
+    kit: boolean
+}
+
+// Tipagem para o cabeçalho do pedido
+interface PedidoCabecalho {
+    pedido: string
+    dataEmissao: Date
+    cliente: string
+    rua: string
+    bairro: string
+    cidade: string
+}
+
+// Tipagem para item criado (usado na geração de etiquetas)
+interface ItemCriado {
+    produto: string
+    quantidade: number
+    pacoteId: string
+    unidade: number
+    quantidadeTotal: number
+}
+
+// Tipagem para etiqueta gerada
+interface Etiqueta {
+    produto: string
+    numero: number
+    total: number
+    qrcode: string
+}
+
+// Tipagem para dados do QR Code
+interface QRCodeDados {
+    pedidoId: string
+    descricao: string
+    pacoteId: string
+    kit: boolean
+    etiquetaNumero: number
+    etiquetaTotal: number
+    produto: string
+}
 interface IRequest {
     file: Express.Multer.File
 }
@@ -47,27 +103,84 @@ class ImportPedidosUseCase {
         private pacoteItemRepository: IPacoteItemRepository
     ) {}
 
-    async parseExcelData(row: any, queryRunner: any): Promise<any> {
-        const produtoId = await this.produtoRepository.findByNameWithQueryRunner(row["Ordem de embarque"], queryRunner)
+    async parseExcelData(row: ExcelRow, queryRunner: QueryRunner): Promise<ParsedPedidoItem> {
+        try {
+            // Validar se os dados necessários existem
+            if (!row || !row["Ordem de embarque"]) {
+                throw new AppError(`Dados inválidos na linha: ${JSON.stringify(row)}`)
+            }
 
-        if (!produtoId) return null
+            const nomeProduto = row["Ordem de embarque"].toString().trim()
+            if (!nomeProduto) {
+                throw new AppError(`Nome do produto vazio na linha: ${JSON.stringify(row)}`)
+            }
 
-        const result = {
-            produto: produtoId.data.id,
-            produtoNome: produtoId.data.nome,
-            quantidade: row["__EMPTY_3"] ? parseInt(row["__EMPTY_3"]) : 0,
-            kit: produtoId.data.descricao.includes("KT"),
+            console.log(`Buscando produto: "${nomeProduto}"`)
+
+            const produtoId = await this.produtoRepository.findByNameWithQueryRunner(nomeProduto, queryRunner.manager)
+            console.log("++++++++++")
+            console.log("produtoId", produtoId)
+            console.log("++++++++++")
+
+            // Verificar se houve erro na busca (transação abortada)
+            if (produtoId.statusCode === 500) {
+                console.log("ERRO: Transação abortada durante busca do produto!")
+                throw new AppError(`Transação abortada ao buscar produto: ${nomeProduto}`)
+            }
+
+            if (produtoId.statusCode === 200 && produtoId.data) {
+                const result = {
+                    produto: produtoId.data.id,
+                    produtoNome: nomeProduto,
+                    quantidade: row["__EMPTY_3"] ? parseInt(row["__EMPTY_3"].toString()) : 0,
+                    kit: row["__EMPTY"] ? row["__EMPTY"].toString().includes("KT") : false,
+                }
+                return result
+            } else {
+                const descricaoProduto = row["__EMPTY"] ? row["__EMPTY"].toString().trim() : ""
+
+                console.log(`Criando novo produto: "${nomeProduto}" com descrição: "${descricaoProduto}"`)
+
+                const newProduto = await this.produtoRepository.createWithQueryRunner(
+                    {
+                        nome: nomeProduto,
+                        descricao: descricaoProduto,
+                        tipo: 0,
+                    },
+                    queryRunner.manager
+                )
+                console.log("newProduto", newProduto)
+
+                // Verificar se houve erro na criação (transação abortada)
+                if (newProduto.statusCode === 500) {
+                    console.log("ERRO: Transação abortada durante criação do produto!")
+                    throw new AppError(`Transação abortada ao criar produto: ${nomeProduto}`)
+                }
+
+                if (newProduto.statusCode !== 200 || !newProduto.data) {
+                    throw new AppError(`Erro ao criar produto: ${nomeProduto} - ${newProduto.statusCode} - ${newProduto.data}`)
+                }
+
+                const result = {
+                    produto: newProduto.data.id,
+                    produtoNome: nomeProduto,
+                    quantidade: row["__EMPTY_3"] ? parseInt(row["__EMPTY_3"].toString()) : 0,
+                    kit: row["__EMPTY"] ? row["__EMPTY"].toString().includes("KT") : false,
+                }
+                return result
+            }
+        } catch (error) {
+            console.log("Error in parseExcelData:", error)
+            throw error // Propagar o erro para cima
         }
-
-        return result
     }
 
-    private async parseExcelFile(file: Express.Multer.File): Promise<any[]> {
+    private async parseExcelFile(file: Express.Multer.File): Promise<ExcelRow[]> {
         return new Promise((resolve) => {
             const fileContent = fs.readFileSync(file.path)
             const workbook = xlsx.read(fileContent, { type: "buffer" })
             const sheetNames = workbook.SheetNames
-            const excelData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetNames[0]])
+            const excelData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetNames[0]]) as ExcelRow[]
 
             resolve(excelData)
         })
@@ -81,13 +194,13 @@ class ImportPedidosUseCase {
         try {
             const rows = await this.parseExcelFile(file)
 
-            const cabecalho = {
-                pedido: rows[0]["Ordem de embarque"],
-                dataEmissao: moment(rows[0]["__EMPTY_5"].split(": ")[1], "DD/MM/YYYY").toDate(),
-                cliente: rows[1]["Ordem de embarque"].split(": ")[1],
-                rua: rows[2]["Ordem de embarque"].split(": ")[1],
-                bairro: rows[2]["__EMPTY_2"].split(": ")[1],
-                cidade: rows[2]["__EMPTY_5"].split(": ")[1],
+            const cabecalho: PedidoCabecalho = {
+                pedido: rows[0]["Ordem de embarque"].toString(),
+                dataEmissao: moment(rows[0]["__EMPTY_5"].toString().split(": ")[1], "DD/MM/YYYY").toDate(),
+                cliente: rows[1]["Ordem de embarque"].toString().split(": ")[1],
+                rua: rows[2]["Ordem de embarque"].toString().split(": ")[1],
+                bairro: rows[2]["__EMPTY_2"].toString().split(": ")[1],
+                cidade: rows[2]["__EMPTY_5"].toString().split(": ")[1],
             }
 
             const {
@@ -108,27 +221,27 @@ class ImportPedidosUseCase {
             )
 
             const items = rows.slice(6, rows.length - 2)
-            const itensKit = []
-            const itemsCriados = []
-            const pacotesCriados = []
+            const itensKit: ParsedPedidoItem[] = []
+            const itemsCriados: ItemCriado[] = []
+            const pacotesCriados: any[] = []
 
             for await (const row of items) {
-                let pedidoItemParse = await this.parseExcelData(row, queryRunner.manager)
+                const pedidoItemParse: ParsedPedidoItem = await this.parseExcelData(row, queryRunner)
 
-                if (!pedidoItemParse) {
-                    await this.produtoRepository.createWithQueryRunner(
-                        {
-                            nome: row["Ordem de embarque"],
-                            descricao: row["__EMPTY"],
-                            tipo: 0,
-                        },
-                        queryRunner.manager
-                    )
+                // Validar se o parse foi bem-sucedido
+                if (!pedidoItemParse || !pedidoItemParse.produto) {
+                    throw new AppError(`Erro ao processar item do pedido: ${row["Ordem de embarque"]}`)
                 }
 
-                pedidoItemParse = await this.parseExcelData(row, queryRunner.manager)
+                console.log("=== CRIANDO PEDIDO ITEM ===")
+                console.log("Dados do pedidoItem:", {
+                    pedidoId: pedido.data.id,
+                    produto: pedidoItemParse.produto,
+                    quantidade: pedidoItemParse.quantidade,
+                    kit: pedidoItemParse.kit,
+                })
 
-                await this.pedidoItemRepository.createWithQueryRunner(
+                const pedidoItemResult = await this.pedidoItemRepository.createWithQueryRunner(
                     {
                         pedidoId: pedido.data.id,
                         produto: pedidoItemParse.produto,
@@ -137,6 +250,23 @@ class ImportPedidosUseCase {
                     },
                     queryRunner.manager
                 )
+
+                console.log("Resultado da criação do pedidoItem:", pedidoItemResult)
+
+                // Verificar se houve erro na criação do pedidoItem
+                if (pedidoItemResult.statusCode === 500) {
+                    console.log("ERRO: Transação abortada durante criação do pedidoItem!")
+                    throw new AppError(`Transação abortada ao criar pedidoItem para produto: ${pedidoItemParse.produtoNome}`)
+                }
+
+                if (pedidoItemResult.statusCode !== 200) {
+                    console.log("ERRO: Falha na criação do pedidoItem!")
+                    throw new AppError(
+                        `Erro ao criar pedidoItem: ${pedidoItemParse.produtoNome} - Status: ${pedidoItemResult.statusCode}`
+                    )
+                }
+
+                console.log("=== PEDIDO ITEM CRIADO COM SUCESSO ===")
 
                 if (pedidoItemParse.kit) {
                     itensKit.push(pedidoItemParse)
@@ -195,10 +325,10 @@ class ImportPedidosUseCase {
             }
 
             // Gerar todas as etiquetas primeiro
-            const todasEtiquetas = []
+            const todasEtiquetas: Etiqueta[] = []
             for (const item of itemsCriados) {
                 // Cada item já representa uma unidade individual, então criar uma etiqueta para cada
-                const qrCodeDados = {
+                const qrCodeDados: QRCodeDados = {
                     pedidoId: pedido.data.id,
                     descricao: pedido.data.descricao,
                     pacoteId: item.pacoteId,
@@ -228,7 +358,7 @@ class ImportPedidosUseCase {
 
             // Dividir em páginas com 6 etiquetas por página (2 por linha)
             const etiquetasPorPagina = 6
-            const paginas = []
+            const paginas: Etiqueta[][] = []
 
             for (let i = 0; i < todasEtiquetas.length; i += etiquetasPorPagina) {
                 const paginaEtiquetas = todasEtiquetas.slice(i, i + etiquetasPorPagina)
@@ -357,7 +487,9 @@ class ImportPedidosUseCase {
             await queryRunner.commitTransaction()
             return itensKit.length > 0 ? ok(pdfBuffer) : noContent()
         } catch (error) {
+            console.log("---------------")
             console.log(error)
+            console.log("---------------")
             fs.unlinkSync(file.path)
             await queryRunner.rollbackTransaction()
             return serverError(error)

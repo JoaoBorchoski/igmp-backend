@@ -16,7 +16,7 @@ class PedidoItem {
     produto?: string
 
     @Column({ name: "quantidade", nullable: true })
-    quantidade?: Number
+    quantidade?: number
 
     @Column({ name: "cor_etiqueta", nullable: true })
     corEtiqueta?: string

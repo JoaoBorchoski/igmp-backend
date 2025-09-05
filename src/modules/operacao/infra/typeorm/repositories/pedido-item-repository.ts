@@ -38,24 +38,60 @@ class PedidoItemRepository implements IPedidoItemRepository {
         { pedidoId, produto, quantidade, corEtiqueta, kit }: IPedidoItemDTO,
         transactionManager: EntityManager
     ): Promise<HttpResponse> {
-        const pedidoItem = transactionManager.create(PedidoItem, {
-            pedidoId,
-            produto,
-            quantidade,
-            corEtiqueta,
-            kit,
-        })
+        try {
+            // Verificar se a transação ainda está ativa
+            if (!transactionManager.queryRunner || !transactionManager.queryRunner.isTransactionActive) {
+                console.log("ERRO: Transação não está mais ativa ao tentar criar pedidoItem!")
+                return serverError(new Error("Transação não está mais ativa"))
+            }
 
-        const result = await transactionManager
-            .save(pedidoItem)
-            .then((pedidoItemResult) => {
-                return ok(pedidoItemResult)
-            })
-            .catch((error) => {
-                return serverError(error)
+            console.log("Criando pedidoItem com dados:", { pedidoId, produto, quantidade, corEtiqueta, kit })
+            console.log("Tipo do pedidoId:", typeof pedidoId)
+            console.log("Tipo do produto:", typeof produto)
+            console.log("Tipo da quantidade:", typeof quantidade)
+
+            // Verificar se pedidoId é válido
+            if (!pedidoId) {
+                throw new Error("pedidoId é obrigatório")
+            }
+
+            // Verificar se produto é válido
+            if (!produto) {
+                throw new Error("produto é obrigatório")
+            }
+
+            const pedidoItem = transactionManager.create(PedidoItem, {
+                pedidoId,
+                produto,
+                quantidade,
+                corEtiqueta,
+                kit,
             })
 
-        return result
+            console.log("PedidoItem criado (antes do save):", pedidoItem)
+
+            const result = await transactionManager
+                .save(pedidoItem)
+                .then((pedidoItemResult) => {
+                    console.log("PedidoItem criado com sucesso:", pedidoItemResult)
+                    return ok(pedidoItemResult)
+                })
+                .catch((error) => {
+                    console.log("=== ERRO DETALHADO AO SALVAR PEDIDO ITEM ===")
+                    console.log("Erro completo:", error)
+                    console.log("Mensagem:", error.message)
+                    console.log("Código:", error.code)
+                    console.log("Stack:", error.stack)
+                    console.log("Dados que causaram o erro:", { pedidoId, produto, quantidade, corEtiqueta, kit })
+                    console.log("=== FIM ERRO DETALHADO ===")
+                    return serverError(error)
+                })
+
+            return result
+        } catch (error) {
+            console.log("Erro geral na criação do pedidoItem:", error)
+            return serverError(error)
+        }
     }
 
     // list

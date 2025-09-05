@@ -77,6 +77,11 @@ class ProdutoRepository implements IProdutoRepository {
         transactionManager: EntityManager
     ): Promise<HttpResponse> {
         try {
+            // Verificar se a transação ainda está ativa
+            if (!transactionManager.queryRunner || !transactionManager.queryRunner.isTransactionActive) {
+                console.log("ERRO: Transação não está mais ativa ao tentar criar produto!")
+                return serverError(new Error("Transação não está mais ativa"))
+            }
             const produto = transactionManager.create(Produto, {
                 nome,
                 descricao,
@@ -103,6 +108,7 @@ class ProdutoRepository implements IProdutoRepository {
 
             return result
         } catch (error) {
+            console.log("Error in createWithQueryRunner:", error)
             return serverError(error)
         }
     }
@@ -344,19 +350,84 @@ class ProdutoRepository implements IProdutoRepository {
 
     async findByNameWithQueryRunner(nome: string, transactionManager: EntityManager): Promise<HttpResponse> {
         try {
-            const produto = await transactionManager
-                .createQueryBuilder(Produto, "prod")
-                .select(['prod.id as "id"', 'prod.nome as "nome"', 'prod.descricao as "descricao"'])
-                .where("prod.nome like :nome", { nome: `%${nome}%` })
-                .orWhere("prod.descricao like :nome", { nome: `%${nome}%` })
-                .getRawOne()
-
-            if (!produto) {
-                return null
+            // Verificar se a transação ainda está ativa
+            if (!transactionManager.queryRunner || !transactionManager.queryRunner.isTransactionActive) {
+                console.log("ERRO: Transação não está mais ativa!")
+                return serverError(new Error("Transação não está mais ativa"))
             }
 
+            // Validar entrada
+            if (!nome || typeof nome !== "string") {
+                console.log("Nome inválido fornecido:", nome)
+                return noContent()
+            }
+
+            const nomeLimpo = nome.trim()
+            if (!nomeLimpo) {
+                console.log("Nome vazio após trim:", nome)
+                return noContent()
+            }
+
+            console.log(`Executando query para produto: "${nomeLimpo}"`)
+            console.log(`Tipo do nome: ${typeof nomeLimpo}, Tamanho: ${nomeLimpo.length}`)
+
+            // Primeiro tentar busca exata (case sensitive)
+            let produto = await transactionManager
+                .createQueryBuilder(Produto, "prod")
+                .select(['prod.id as "id"', 'prod.nome as "nome"', 'prod.descricao as "descricao"'])
+                .where("prod.nome = :nome", { nome: nomeLimpo })
+                .getRawOne()
+
+            console.log(`Resultado busca exata:`, produto)
+
+            // Se não encontrou com busca exata, tentar case insensitive
+            if (!produto) {
+                console.log(`Busca exata falhou, tentando case insensitive para: "${nomeLimpo}"`)
+                produto = await transactionManager
+                    .createQueryBuilder(Produto, "prod")
+                    .select(['prod.id as "id"', 'prod.nome as "nome"', 'prod.descricao as "descricao"'])
+                    .where("LOWER(prod.nome) = LOWER(:nome)", { nome: nomeLimpo })
+                    .getRawOne()
+            }
+
+            console.log(`Resultado busca case insensitive:`, produto)
+
+            // Se ainda não encontrou, tentar com LIKE
+            if (!produto) {
+                console.log(`Busca case insensitive falhou, tentando com LIKE para: "${nomeLimpo}"`)
+                produto = await transactionManager
+                    .createQueryBuilder(Produto, "prod")
+                    .select(['prod.id as "id"', 'prod.nome as "nome"', 'prod.descricao as "descricao"'])
+                    .where("prod.nome like :nome", { nome: `%${nomeLimpo}%` })
+                    .orWhere("prod.descricao like :nome", { nome: `%${nomeLimpo}%` })
+                    .getRawOne()
+            }
+
+            console.log(`Resultado busca LIKE:`, produto)
+
+            if (!produto) {
+                console.log(`Produto não encontrado: "${nomeLimpo}"`)
+
+                // Debug: listar produtos que começam com as primeiras letras
+                const prefixo = nomeLimpo.substring(0, 2)
+                console.log(`Buscando produtos que começam com "${prefixo}" para debug...`)
+
+                const produtosDebug = await transactionManager
+                    .createQueryBuilder(Produto, "prod")
+                    .select(['prod.id as "id"', 'prod.nome as "nome"', 'prod.descricao as "descricao"'])
+                    .where("prod.nome like :prefixo", { prefixo: `${prefixo}%` })
+                    .limit(10)
+                    .getRawMany()
+
+                console.log(`Produtos encontrados com prefixo "${prefixo}":`, produtosDebug)
+
+                return noContent()
+            }
+
+            console.log(`Produto encontrado:`, produto)
             return ok(produto)
         } catch (err) {
+            console.log("Error in findByNameWithQueryRunner:", err)
             return serverError(err)
         }
     }
