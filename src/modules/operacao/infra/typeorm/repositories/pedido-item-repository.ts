@@ -45,10 +45,10 @@ class PedidoItemRepository implements IPedidoItemRepository {
                 return serverError(new Error("Transação não está mais ativa"))
             }
 
-            console.log("Criando pedidoItem com dados:", { pedidoId, produto, quantidade, corEtiqueta, kit })
-            console.log("Tipo do pedidoId:", typeof pedidoId)
-            console.log("Tipo do produto:", typeof produto)
-            console.log("Tipo da quantidade:", typeof quantidade)
+            // console.log("Criando pedidoItem com dados:", { pedidoId, produto, quantidade, corEtiqueta, kit })
+            // console.log("Tipo do pedidoId:", typeof pedidoId)
+            // console.log("Tipo do produto:", typeof produto)
+            // console.log("Tipo da quantidade:", typeof quantidade)
 
             // Verificar se pedidoId é válido
             if (!pedidoId) {
@@ -68,12 +68,12 @@ class PedidoItemRepository implements IPedidoItemRepository {
                 kit,
             })
 
-            console.log("PedidoItem criado (antes do save):", pedidoItem)
+            // console.log("PedidoItem criado (antes do save):", pedidoItem)
 
             const result = await transactionManager
                 .save(pedidoItem)
                 .then((pedidoItemResult) => {
-                    console.log("PedidoItem criado com sucesso:", pedidoItemResult)
+                    // console.log("PedidoItem criado com sucesso:", pedidoItemResult)
                     return ok(pedidoItemResult)
                 })
                 .catch((error) => {

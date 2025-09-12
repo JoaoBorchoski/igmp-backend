@@ -40,7 +40,7 @@ class CreatePacoteUseCase {
             const pedido = await this.pedidoRepository.get(pedidoId)
             const numPacotes = await this.pacoteRepository.getNumeroPacotesByPedidoId(pedidoId)
 
-            const itemsComQuantidadeExedida = []
+            // const itemsComQuantidadeExedida = []
             const itemsCriados = []
             const result = await this.pacoteRepository.createWithQueryRunner(
                 {
@@ -52,37 +52,73 @@ class CreatePacoteUseCase {
 
             if (!!pedidoId) {
                 for await (const item of pacoteItems) {
-                    const quantidade = await this.pacoteItemRepository.getQuantidadeByPedidoIdAndProdutoId(
-                        pedidoId,
-                        item.produtoId
-                    )
-                    const pedidoItem = await this.pedidoItemRepository.getByPedidoIdAndProduto(pedidoId, item.produtoId)
+                    // const quantidade = await this.pacoteItemRepository.getQuantidadeByPedidoIdAndProdutoId(
+                    //     pedidoId,
+                    //     item.produtoId
+                    // )
+                    // const pedidoItem = await this.pedidoItemRepository.getByPedidoIdAndProduto(pedidoId, item.produtoId)
 
-                    if (+item.quantidade + +quantidade.data.quantidadeUsada > +pedidoItem.data.quantidade) {
-                        itemsComQuantidadeExedida.push({
-                            produto: item.produto,
-                            quantidade: item.quantidade,
-                            quantidadeUsada: quantidade.data.quantidadeUsada,
-                            quantidadeDisponivel: pedidoItem.data.quantidade - quantidade.data.quantidadeUsada,
-                        })
-                        continue
-                    }
+                    // if (+item.quantidade + +quantidade.data.quantidadeUsada > +pedidoItem.data.quantidade) {
+                    //     itemsComQuantidadeExedida.push({
+                    //         produto: item.produto,
+                    //         quantidade: item.quantidade,
+                    //         quantidadeUsada: quantidade.data.quantidadeUsada,
+                    //         quantidadeDisponivel: pedidoItem.data.quantidade - quantidade.data.quantidadeUsada,
+                    //     })
+                    //     continue
+                    // }
 
                     const pacoteItem = await this.pacoteItemRepository.createWithQueryRunner(
                         {
                             pacoteId: result.data.id,
                             produto: item.produtoId,
                             quantidade: item.quantidade,
+                            quantidadeLateral: item.quantidadeLateral,
+                            quantidadeCabeceira: item.quantidadeCabeceira,
+                            quantidadeLateralCabeceira: item.quantidadeLateralCabeceira,
+                            tipoItem: item.tipoItem,
                         },
                         queryRunner.manager
                     )
 
                     const produtoCriado = await this.produtoRepository.get(item.produtoId)
 
-                    itemsCriados.push({
-                        produto: produtoCriado.data.nomeCompleto,
-                        quantidade: pacoteItem.data.quantidade,
-                    })
+                    // Verificar se há quantidades específicas (lateral, cabeceira, lateralCabeceira)
+                    const temQuantidadesEspecificas =
+                        (pacoteItem.data.quantidadeLateral && pacoteItem.data.quantidadeLateral > 0) ||
+                        (pacoteItem.data.quantidadeCabeceira && pacoteItem.data.quantidadeCabeceira > 0) ||
+                        (pacoteItem.data.quantidadeLateralCabeceira && pacoteItem.data.quantidadeLateralCabeceira > 0)
+
+                    if (temQuantidadesEspecificas) {
+                        // Adicionar linhas específicas para cada tipo de quantidade que tiver valor
+                        if (pacoteItem.data.quantidadeLateral && pacoteItem.data.quantidadeLateral > 0) {
+                            itemsCriados.push({
+                                produto: produtoCriado.data.nomeCompleto,
+                                quantidade: pacoteItem.data.quantidadeLateral,
+                                tipo: "Lateral",
+                            })
+                        }
+                        if (pacoteItem.data.quantidadeCabeceira && pacoteItem.data.quantidadeCabeceira > 0) {
+                            itemsCriados.push({
+                                produto: produtoCriado.data.nomeCompleto,
+                                quantidade: pacoteItem.data.quantidadeCabeceira,
+                                tipo: "Cabeceira",
+                            })
+                        }
+                        if (pacoteItem.data.quantidadeLateralCabeceira && pacoteItem.data.quantidadeLateralCabeceira > 0) {
+                            itemsCriados.push({
+                                produto: produtoCriado.data.nomeCompleto,
+                                quantidade: pacoteItem.data.quantidadeLateralCabeceira,
+                                tipo: "Lateral da Cabeceira",
+                            })
+                        }
+                    } else {
+                        // Manter a lógica atual quando apenas o campo quantidade tiver valor
+                        itemsCriados.push({
+                            produto: produtoCriado.data.nomeCompleto,
+                            quantidade: pacoteItem.data.quantidade,
+                        })
+                    }
                 }
             } else {
                 for await (const item of pacoteItems) {
@@ -104,15 +140,15 @@ class CreatePacoteUseCase {
                 }
             }
 
-            if (itemsComQuantidadeExedida.length > 0) {
-                await queryRunner.rollbackTransaction()
-                const message = itemsComQuantidadeExedida
-                    .map((item) => {
-                        return `Produto: ${item.produto}, Quantidade Requerida: ${item.quantidade}, Quantidade Usada: ${item.quantidadeUsada}, Quantidade Disponível: ${item.quantidadeDisponivel}`
-                    })
-                    .join("   ---   ")
-                return createError(410, `Quantidade excedida para os seguintes itens: ${message}`)
-            }
+            // if (itemsComQuantidadeExedida.length > 0) {
+            //     await queryRunner.rollbackTransaction()
+            //     const message = itemsComQuantidadeExedida
+            //         .map((item) => {
+            //             return `Produto: ${item.produto}, Quantidade Requerida: ${item.quantidade}, Quantidade Usada: ${item.quantidadeUsada}, Quantidade Disponível: ${item.quantidadeDisponivel}`
+            //         })
+            //         .join("   ---   ")
+            //     return createError(410, `Quantidade excedida para os seguintes itens: ${message}`)
+            // }
 
             const qrCodeDados = {
                 pacoteId: result.data.id,
@@ -174,7 +210,11 @@ class CreatePacoteUseCase {
                             <ul>
                                 ${itemsCriados
                                     .map((item) => {
-                                        return `<li>${item.produto} = ${item.quantidade} PÇS</li>`
+                                        if (item.tipo) {
+                                            return `<li>${item.produto} - ${item.tipo} = ${item.quantidade} PÇS</li>`
+                                        } else {
+                                            return `<li>${item.produto} = ${item.quantidade} PÇS</li>`
+                                        }
                                     })
                                     .join("")}
                             </ul>

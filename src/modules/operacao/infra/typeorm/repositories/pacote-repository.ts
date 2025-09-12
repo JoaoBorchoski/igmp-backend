@@ -199,7 +199,12 @@ class PacoteRepository implements IPacoteRepository {
                     pi.pacote_id,
                     pi.produto,
                     p.nome || ' - ' || p.descricao produto_nome,
-                    pi.quantidade
+                    pi.quantidade,
+                    pi.quantidade_lateral,
+                    pi.quantidade_cabeceira,
+                    pi.quantidade_lateral_cabeceira,
+                    pi.tipo_item,
+                    pi.confirmado
                 FROM 
                     pacotes_items pi
                 JOIN 

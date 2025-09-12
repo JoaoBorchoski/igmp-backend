@@ -289,6 +289,29 @@ class PedidoRepository implements IPedidoRepository {
 
             pedido.pedidoItems = pedidoItems
 
+            const pacoteItems = await this.repository.query(
+                `
+                    SELECT 
+                        pi.id,
+                        pi.pacote_id,
+                        pi.produto,
+                        COALESCE(pi.quantidade :: integer, 0) as "quantidade",
+                        COALESCE(pi.quantidade_lateral, 0) as "quantidade_lateral",
+                        COALESCE(pi.quantidade_cabeceira, 0) as "quantidade_cabeceira",
+                        COALESCE(pi.quantidade_lateral_cabeceira, 0) as "quantidade_lateral_cabeceira",
+                        pi.tipo_item,
+                        prod.nome || ' - ' || prod.descricao as "produto_nome",
+                        pi.confirmado
+                    FROM pacotes pac
+                    LEFT JOIN pacotes_items pi ON pi.pacote_id = pac.id
+                    LEFT JOIN produtos prod ON prod.id :: varchar = pi.produto
+                    WHERE pac.pedido_id = $1
+                `,
+                [pedido.id]
+            )
+
+            pedido.pacoteItems = pacoteItems
+
             return ok(pedido)
         } catch (err) {
             console.log(err)

@@ -33,13 +33,27 @@ class PacoteItemRepository implements IPacoteItemRepository {
     }
 
     async createWithQueryRunner(
-        { pacoteId, produto, quantidade }: IPacoteItemDTO,
+        {
+            pacoteId,
+            produto,
+            quantidade,
+            quantidadeLateral,
+            quantidadeCabeceira,
+            quantidadeLateralCabeceira,
+            tipoItem,
+            confirmado,
+        }: IPacoteItemDTO,
         transactionManager: EntityManager
     ): Promise<HttpResponse> {
         const pacoteItem = transactionManager.create(PacoteItem, {
             pacoteId,
             produto,
             quantidade,
+            quantidadeLateral,
+            quantidadeCabeceira,
+            quantidadeLateralCabeceira,
+            tipoItem,
+            confirmado,
         })
 
         const result = await transactionManager

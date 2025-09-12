@@ -115,16 +115,16 @@ class ImportPedidosUseCase {
                 throw new AppError(`Nome do produto vazio na linha: ${JSON.stringify(row)}`)
             }
 
-            console.log(`Buscando produto: "${nomeProduto}"`)
+            // console.log(`Buscando produto: "${nomeProduto}"`)
 
             const produtoId = await this.produtoRepository.findByNameWithQueryRunner(nomeProduto, queryRunner.manager)
-            console.log("++++++++++")
-            console.log("produtoId", produtoId)
-            console.log("++++++++++")
+            // console.log("++++++++++")
+            // console.log("produtoId", produtoId)
+            // console.log("++++++++++")
 
             // Verificar se houve erro na busca (transação abortada)
             if (produtoId.statusCode === 500) {
-                console.log("ERRO: Transação abortada durante busca do produto!")
+                // console.log("ERRO: Transação abortada durante busca do produto!")
                 throw new AppError(`Transação abortada ao buscar produto: ${nomeProduto}`)
             }
 
@@ -139,7 +139,7 @@ class ImportPedidosUseCase {
             } else {
                 const descricaoProduto = row["__EMPTY"] ? row["__EMPTY"].toString().trim() : ""
 
-                console.log(`Criando novo produto: "${nomeProduto}" com descrição: "${descricaoProduto}"`)
+                // console.log(`Criando novo produto: "${nomeProduto}" com descrição: "${descricaoProduto}"`)
 
                 const newProduto = await this.produtoRepository.createWithQueryRunner(
                     {
@@ -149,11 +149,11 @@ class ImportPedidosUseCase {
                     },
                     queryRunner.manager
                 )
-                console.log("newProduto", newProduto)
+                // console.log("newProduto", newProduto)
 
                 // Verificar se houve erro na criação (transação abortada)
                 if (newProduto.statusCode === 500) {
-                    console.log("ERRO: Transação abortada durante criação do produto!")
+                    // console.log("ERRO: Transação abortada durante criação do produto!")
                     throw new AppError(`Transação abortada ao criar produto: ${nomeProduto}`)
                 }
 
@@ -170,7 +170,7 @@ class ImportPedidosUseCase {
                 return result
             }
         } catch (error) {
-            console.log("Error in parseExcelData:", error)
+            // console.log("Error in parseExcelData:", error)
             throw error // Propagar o erro para cima
         }
     }
@@ -233,13 +233,13 @@ class ImportPedidosUseCase {
                     throw new AppError(`Erro ao processar item do pedido: ${row["Ordem de embarque"]}`)
                 }
 
-                console.log("=== CRIANDO PEDIDO ITEM ===")
-                console.log("Dados do pedidoItem:", {
-                    pedidoId: pedido.data.id,
-                    produto: pedidoItemParse.produto,
-                    quantidade: pedidoItemParse.quantidade,
-                    kit: pedidoItemParse.kit,
-                })
+                // console.log("=== CRIANDO PEDIDO ITEM ===")
+                // console.log("Dados do pedidoItem:", {
+                //     pedidoId: pedido.data.id,
+                //     produto: pedidoItemParse.produto,
+                //     quantidade: pedidoItemParse.quantidade,
+                //     kit: pedidoItemParse.kit,
+                // })
 
                 const pedidoItemResult = await this.pedidoItemRepository.createWithQueryRunner(
                     {
@@ -251,22 +251,22 @@ class ImportPedidosUseCase {
                     queryRunner.manager
                 )
 
-                console.log("Resultado da criação do pedidoItem:", pedidoItemResult)
+                // console.log("Resultado da criação do pedidoItem:", pedidoItemResult)
 
                 // Verificar se houve erro na criação do pedidoItem
                 if (pedidoItemResult.statusCode === 500) {
-                    console.log("ERRO: Transação abortada durante criação do pedidoItem!")
+                    // console.log("ERRO: Transação abortada durante criação do pedidoItem!")
                     throw new AppError(`Transação abortada ao criar pedidoItem para produto: ${pedidoItemParse.produtoNome}`)
                 }
 
                 if (pedidoItemResult.statusCode !== 200) {
-                    console.log("ERRO: Falha na criação do pedidoItem!")
+                    // console.log("ERRO: Falha na criação do pedidoItem!")
                     throw new AppError(
                         `Erro ao criar pedidoItem: ${pedidoItemParse.produtoNome} - Status: ${pedidoItemResult.statusCode}`
                     )
                 }
 
-                console.log("=== PEDIDO ITEM CRIADO COM SUCESSO ===")
+                // console.log("=== PEDIDO ITEM CRIADO COM SUCESSO ===")
 
                 if (pedidoItemParse.kit) {
                     itensKit.push(pedidoItemParse)
@@ -356,8 +356,8 @@ class ImportPedidosUseCase {
                 })
             }
 
-            // Dividir em páginas com 6 etiquetas por página (2 por linha)
-            const etiquetasPorPagina = 6
+            // Dividir em páginas com 3 etiquetas por página (na vertical)
+            const etiquetasPorPagina = 3
             const paginas: Etiqueta[][] = []
 
             for (let i = 0; i < todasEtiquetas.length; i += etiquetasPorPagina) {
@@ -367,74 +367,44 @@ class ImportPedidosUseCase {
 
             // Gerar HTML para cada página
             let paginasHTML = ""
+            const logoDataUrl = fs
+                .readFileSync("/opt/projetos/igmp/backend/tmp/logo_IGMP-removebg-preview.png")
+                .toString("base64")
 
             paginas.forEach((pagina, paginaIndex) => {
                 let etiquetasHTML = ""
 
-                // Dividir etiquetas em 2 colunas (3 linhas)
-                for (let i = 0; i < pagina.length; i += 2) {
-                    const etiqueta1 = pagina[i]
-                    const etiqueta2 = pagina[i + 1]
+                // Etiquetas em coluna única (uma em cima da outra)
+                for (let i = 0; i < pagina.length; i++) {
+                    const etiqueta = pagina[i]
 
                     etiquetasHTML += `
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                            <div style="border: 2px solid #000; padding: 12px; text-align: left; width: 45%; min-height: 180px; display: flex; flex-direction: column; justify-content: space-between;">
-                                <div>
-                                    <div style="text-align: center; margin-bottom: 8px;">
-                                        <strong style="font-size: 16px; color: #6495ED;">IGMP</strong><br>
-                                        <span style="font-size: 12px;">PORTAS E ESQUADRIAS</span>
-                                    </div>
-                                    <div style="margin-bottom: 6px; font-size: 12px;">
-                                        <strong>Descrição:</strong> ${etiqueta1.produto}
-                                    </div>
-                                    <div style="margin-bottom: 6px; font-size: 12px;">
-                                        <strong>Cliente:</strong> ${nome}
-                                    </div>
+                        <div style="border: 2px solid #000; padding: 12px; text-align: left; min-height: 180px; display: flex; flex-direction: column; justify-content: space-between; margin: 0 auto 15px;">
+                            <div>
+                                <div style="text-align: center; margin-bottom: 8px;">
+                                    <img src="data:image/png;base64,${logoDataUrl}" style="height: 50px;">
                                 </div>
-                                <div style="text-align: center; margin-top: auto;">
-                                    <img src="${
-                                        etiqueta1.qrcode
-                                    }" style="width: 150px; height: 150px; margin: 0 auto 5px; display: block;">
-                                    <div style="font-size: 10px;">
-                                        Etiqueta ${etiqueta1.numero} de ${etiqueta1.total}
-                                    </div>
+                                <div style="margin-bottom: 6px; font-size: 12px;">
+                                    <strong>Descrição:</strong> ${etiqueta.produto}
+                                </div>
+                                <div style="margin-bottom: 6px; font-size: 12px;">
+                                    <strong>Cliente:</strong> ${nome}
                                 </div>
                             </div>
-                            ${
-                                etiqueta2
-                                    ? `
-                                <div style="border: 2px solid #000; padding: 12px; text-align: left; width: 45%; min-height: 180px; display: flex; flex-direction: column; justify-content: space-between;">
-                                    <div>
-                                        <div style="text-align: center; margin-bottom: 8px;">
-                                            <strong style="font-size: 16px; color: #6495ED;">IGMP</strong><br>
-                                            <span style="font-size: 12px;">PORTAS E ESQUADRIAS</span>
-                                        </div>
-                                        <div style="margin-bottom: 6px; font-size: 12px;">
-                                            <strong>Descrição:</strong> ${etiqueta2.produto}
-                                        </div>
-                                        <div style="margin-bottom: 6px; font-size: 12px;">
-                                            <strong>Cliente:</strong> ${nome}
-                                        </div>
-                                    </div>
-                                    <div style="text-align: center; margin-top: auto;">
-                                        <img src="${etiqueta2.qrcode}" style="width: 150px; height: 150px; margin: 0 auto 5px; display: block;">
-                                        <div style="font-size: 10px;">
-                                            Etiqueta ${etiqueta2.numero} de ${etiqueta2.total}
-                                        </div>
-                                    </div>
+                            <div style="text-align: center; margin-top: auto;">
+                                <img src="${etiqueta.qrcode}" style="width: 150px; height: 150px; margin: 0 auto 5px; display: block;">
+                                <div style="font-size: 10px;">
+                                    Etiqueta ${etiqueta.numero} de ${etiqueta.total}
                                 </div>
-                            `
-                                    : '<div style="width: 45%;"></div>'
-                            }
+                            </div>
                         </div>
                     `
                 }
 
                 paginasHTML += `
                     <div class="pagina" style="page-break-after: always;">
-                        <h2 class="nome">IGMP PORTAS E ESQUADRIAS LTDA/CNPJ: 47.673.906/0001-30</h2>
-                        <h3>Pedido: ${pedido.data.descricao} - Cliente: ${nome}</h3>
-                        <div style="margin-top: 15px;">
+                        <h2>${pedido.data.descricao} - Cliente: ${nome}</h2>
+                        <div style="margin-top: 15px;"></div>
                             ${etiquetasHTML}
                         </div>
                     </div>
@@ -487,9 +457,9 @@ class ImportPedidosUseCase {
             await queryRunner.commitTransaction()
             return itensKit.length > 0 ? ok(pdfBuffer) : noContent()
         } catch (error) {
-            console.log("---------------")
+            // console.log("---------------")
             console.log(error)
-            console.log("---------------")
+            // console.log("---------------")
             fs.unlinkSync(file.path)
             await queryRunner.rollbackTransaction()
             return serverError(error)
