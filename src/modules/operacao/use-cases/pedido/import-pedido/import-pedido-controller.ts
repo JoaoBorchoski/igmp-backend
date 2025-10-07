@@ -13,13 +13,13 @@ class ImportPedidosController {
             file: request.file,
         })
 
-        if (result.statusCode === 200) {
-            response.setHeader("Content-Type", "application/pdf")
-            response.setHeader("Content-Disposition", `attachment; filename="pedido-teste.pdf"`)
-            return response.send(result.data)
-        }
+        // if (result.statusCode === 200) {
+        //     response.setHeader("Content-Type", "application/pdf")
+        //     response.setHeader("Content-Disposition", `attachment; filename="pedido-teste.pdf"`)
+        //     return response.send(result.data)
+        // }
 
-        return response.status(result.statusCode).send(result)
+        return response.status(result.statusCode).send(result.data)
     }
 }
 

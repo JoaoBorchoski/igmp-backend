@@ -224,6 +224,7 @@ class ImportPedidosUseCase {
             const itensKit: ParsedPedidoItem[] = []
             const itemsCriados: ItemCriado[] = []
             const pacotesCriados: any[] = []
+            const todosItensCriados: any[] = []
 
             for await (const row of items) {
                 const pedidoItemParse: ParsedPedidoItem = await this.parseExcelData(row, queryRunner)
@@ -265,6 +266,13 @@ class ImportPedidosUseCase {
                         `Erro ao criar pedidoItem: ${pedidoItemParse.produtoNome} - Status: ${pedidoItemResult.statusCode}`
                     )
                 }
+
+                const produto = await this.produtoRepository.getWithQueryRunner(pedidoItemParse.produto, queryRunner.manager)
+
+                todosItensCriados.push({
+                    ...pedidoItemResult.data,
+                    produtoDescricao: produto.data.nomeCompleto,
+                })
 
                 // console.log("=== PEDIDO ITEM CRIADO COM SUCESSO ===")
 
@@ -453,9 +461,23 @@ class ImportPedidosUseCase {
 
             await browser.close()
 
+            const result = {
+                pedido: pedido.data,
+                itens: todosItensCriados,
+                itemsCriados: itemsCriados.map((item) => ({
+                    ...item,
+                    torre: "",
+                    andar: null,
+                    apto: null,
+                    ambiente: "",
+                })),
+            }
+
             fs.unlinkSync(file.path)
-            await queryRunner.commitTransaction()
-            return itensKit.length > 0 ? ok(pdfBuffer) : noContent()
+            await queryRunner.rollbackTransaction()
+            // await queryRunner.commitTransaction()
+            // return itensKit.length > 0 ? ok(pdfBuffer) : noContent()
+            return ok(result)
         } catch (error) {
             // console.log("---------------")
             console.log(error)

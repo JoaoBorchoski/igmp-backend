@@ -369,7 +369,7 @@ class ProdutoRepository implements IProdutoRepository {
             }
 
             // console.log(`Executando query para produto: "${nomeLimpo}"`)
-            console.log(`Tipo do nome: ${typeof nomeLimpo}, Tamanho: ${nomeLimpo.length}`)
+            // console.log(`Tipo do nome: ${typeof nomeLimpo}, Tamanho: ${nomeLimpo.length}`)
 
             // Primeiro tentar busca exata (case sensitive)
             let produto = await transactionManager
