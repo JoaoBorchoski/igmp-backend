@@ -13,6 +13,8 @@ import { MultiDeletePedidoController } from "@modules/operacao/use-cases/pedido/
 import { ensureAuthenticated } from "@shared/infra/http/middlewares/ensure-authenticated"
 import { ImportPedidosController } from "@modules/operacao/use-cases/pedido/import-pedido/import-pedido-controller"
 import { CreatePedidoImportController } from "@modules/operacao/use-cases/pedido/create-pedido-import/create-pedido-import-controller"
+import { SelectPacotesPedidoController } from "@modules/operacao/use-cases/pedido/select-pacotes-pedido/select-pacotes-pedido-controller"
+import { IdSelectPacotesPedidoController } from "@modules/operacao/use-cases/pedido/id-select-pacotes-pedido/select-pacotes-pedido-controller"
 
 const uploadFiles = multer(uploadConfig)
 const pedidosRoutes = Router()
@@ -28,12 +30,16 @@ const deletePedidoController = new DeletePedidoController()
 const multiDeletePedidoController = new MultiDeletePedidoController()
 const importPedidosController = new ImportPedidosController()
 const createPedidoImportController = new CreatePedidoImportController()
+const selectPacotesPedidoController = new SelectPacotesPedidoController()
+const idSelectPacotesPedidoController = new IdSelectPacotesPedidoController()
 
 pedidosRoutes.post("/", ensureAuthenticated, createPedidoController.handle)
 pedidosRoutes.post("/import", ensureAuthenticated, uploadFiles.single("arquivos"), importPedidosController.handle)
 pedidosRoutes.post("/create-import", ensureAuthenticated, createPedidoImportController.handle)
 pedidosRoutes.post("/list", ensureAuthenticated, listPedidoController.handle)
 pedidosRoutes.post("/count", ensureAuthenticated, countPedidoController.handle)
+pedidosRoutes.get("/selectPacotes", ensureAuthenticated, selectPacotesPedidoController.handle)
+pedidosRoutes.get("/selectPacotes/:id", ensureAuthenticated, idSelectPacotesPedidoController.handle)
 pedidosRoutes.get("/select/:id", ensureAuthenticated, idSelectPedidoController.handle)
 pedidosRoutes.get("/select", ensureAuthenticated, selectPedidoController.handle)
 pedidosRoutes.get("/:id", ensureAuthenticated, getPedidoController.handle)

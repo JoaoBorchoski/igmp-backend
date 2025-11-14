@@ -5,21 +5,22 @@ import { AppError } from "@shared/errors/app-error"
 import { HttpResponse } from "@shared/helpers"
 
 interface IRequest {
-    id: string
+	id: string
+	espelhoCargaId: string
 }
 
 @injectable()
 class ConfirmaCarregamentoPacoteUseCase {
-    constructor(
-        @inject("PacoteRepository")
-        private pacoteRepository: IPacoteRepository
-    ) {}
+	constructor(
+		@inject("PacoteRepository")
+		private pacoteRepository: IPacoteRepository
+	) {}
 
-    async execute({ id }: IRequest): Promise<HttpResponse> {
-        const pacote = await this.pacoteRepository.updatePacoteItemStatus(id)
+	async execute({ id, espelhoCargaId }: IRequest): Promise<HttpResponse> {
+		const pacote = await this.pacoteRepository.updatePacoteItemStatus(id, espelhoCargaId)
 
-        return pacote
-    }
+		return pacote
+	}
 }
 
 export { ConfirmaCarregamentoPacoteUseCase }

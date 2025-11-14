@@ -36,6 +36,8 @@ import { pacotesItemsRoutes } from "./operacao/pacotes-items-routes"
 import { cadastroObrasRoutes } from "./operacao/cadastro-obras-routes"
 import { medicoesRoutes } from "./operacao/medicoes-routes"
 import { negociacoesRoutes } from "./operacao/negociacoes-routes"
+import { espelhosCargaRoutes } from "./operacao/espelhos-carga-routes"
+import { espelhosCargaItemsRoutes } from "./operacao/espelhos-carga-items-routes"
 import { produtoRoutes } from "./configuracao/produtos-routes"
 
 const router = Router()
@@ -77,6 +79,8 @@ router.use("/pacotes-items", pacotesItemsRoutes)
 router.use("/cadastro-obras", cadastroObrasRoutes)
 router.use("/medicoes", medicoesRoutes)
 router.use("/negociacoes", negociacoesRoutes)
+router.use("/espelhos-carga", espelhosCargaRoutes)
+router.use("/espelhos-carga-items", espelhosCargaItemsRoutes)
 router.use("/produtos", produtoRoutes)
 
 export { router }

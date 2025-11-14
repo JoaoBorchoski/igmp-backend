@@ -34,7 +34,11 @@ pacotesRoutes.get("/select", ensureAuthenticated, selectPacoteController.handle)
 pacotesRoutes.get("/:id", ensureAuthenticated, getPacoteController.handle)
 pacotesRoutes.get("/produto-info/:produtoId/:pedidoId", ensureAuthenticated, getPacoteProdutoInfoController.handle)
 pacotesRoutes.put("/:id", ensureAuthenticated, updatePacoteController.handle)
-pacotesRoutes.get("/confirma-carregamento/:id", ensureAuthenticated, confirmaCarregamentoPacoteController.handle)
+pacotesRoutes.get(
+	"/confirma-carregamento/:id/:espelhoCargaId",
+	ensureAuthenticated,
+	confirmaCarregamentoPacoteController.handle
+)
 pacotesRoutes.delete("/:id", ensureAuthenticated, deletePacoteController.handle)
 pacotesRoutes.delete("/", ensureAuthenticated, multiDeletePacoteController.handle)
 

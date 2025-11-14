@@ -157,7 +157,7 @@ class CreatePedidoImportUseCase {
 					itemsCriados.push({
 						produto: teste.produto,
 						quantidade: 1,
-						pacoteId: teste.pacoteId,
+						pacoteId: pacote.data.id,
 						unidade: teste.unidade,
 						quantidadeTotal: teste.quantidadeTotal,
 						torre: teste.torre,
@@ -257,9 +257,6 @@ class CreatePedidoImportUseCase {
 				// Etiquetas em 2 colunas com 4 etiquetas em cada
 				for (let i = 0; i < pagina.length; i++) {
 					const etiqueta = pagina[i]
-
-					console.log("-------------------------")
-					console.log("etiqueta", etiqueta)
 
 					etiquetasHTML += `
                         <div style="border: 2px solid #000; padding: 12px; text-align: left; min-height: 180px; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 15px;">

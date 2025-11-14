@@ -72,6 +72,10 @@ import { IMedicaoRepository } from "@modules/operacao/repositories/i-medicao-rep
 import { MedicaoRepository } from "@modules/operacao/infra/typeorm/repositories/medicao-repository"
 import { INegociacaoRepository } from "@modules/operacao/repositories/i-negociacao-repository"
 import { NegociacaoRepository } from "@modules/operacao/infra/typeorm/repositories/negociacao-repository"
+import { IEspelhoCargaRepository } from "@modules/operacao/repositories/i-espelho-carga-repository"
+import { EspelhoCargaRepository } from "@modules/operacao/infra/typeorm/repositories/espelho-carga-repository"
+import { IEspelhoCargaItemsRepository } from "@modules/operacao/repositories/i-espelho-carga-items-repository"
+import { EspelhoCargaItemsRepository } from "@modules/operacao/infra/typeorm/repositories/espelho-carga-items-repository"
 import { IProdutoRepository } from "@modules/configuracao/repositories/i-produto-repository"
 import { ProdutoRepository } from "@modules/configuracao/infra/typeorm/repositories/produto-repository"
 
@@ -111,3 +115,5 @@ container.registerSingleton<IPacoteItemRepository>("PacoteItemRepository", Pacot
 container.registerSingleton<ICadastroObraRepository>("CadastroObraRepository", CadastroObraRepository)
 container.registerSingleton<IMedicaoRepository>("MedicaoRepository", MedicaoRepository)
 container.registerSingleton<INegociacaoRepository>("NegociacaoRepository", NegociacaoRepository)
+container.registerSingleton<IEspelhoCargaRepository>("EspelhoCargaRepository", EspelhoCargaRepository)
+container.registerSingleton<IEspelhoCargaItemsRepository>("EspelhoCargaItemsRepository", EspelhoCargaItemsRepository)
