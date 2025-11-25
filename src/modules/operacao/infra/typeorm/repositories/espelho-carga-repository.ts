@@ -97,18 +97,33 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 		const offset = rowsPerPage * page
 
 		try {
-			let query = this.repository
-				.createQueryBuilder("ec")
-				.select([
-					'ec.id as "id"',
-					'ec.pedidoId as "pedidoId"',
-					'p.sequencial as "pedidoSequencial"',
-					'ec.placa as "placa"',
-					'ec.motorista as "motorista"',
-					'ec.lote as "lote"',
-					'ec.descricao as "descricao"',
-				])
-				.leftJoin("ec.pedidoId", "p")
+			let query = this.repository.createQueryBuilder("ec").select([
+				'ec.id as "id"',
+				'ec.pedidoId as "pedidoId"',
+				'ec.placa as "placa"',
+				'ec.motorista as "motorista"',
+				'ec.lote as "lote"',
+				'ec.descricao as "descricao"',
+				`(
+						CASE 
+							WHEN (
+								SELECT COUNT(*) 
+								FROM espelho_carga_items eci 
+								WHERE eci.espelho_carga_id = ec.id
+							) = 0 THEN false
+							WHEN (
+								SELECT COUNT(*) 
+								FROM espelho_carga_items eci 
+								WHERE eci.espelho_carga_id = ec.id AND eci.confirmado = true
+							) = (
+								SELECT COUNT(*) 
+								FROM espelho_carga_items eci 
+								WHERE eci.espelho_carga_id = ec.id
+							) THEN true
+							ELSE false
+						END
+					) as "confirmado"`,
+			])
 
 			if (filter) {
 				query = query.where(filter)
@@ -120,7 +135,7 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 						query.andWhere("CAST(ec.placa AS VARCHAR) ilike :search", { search: `%${search}%` })
 						query.orWhere("CAST(ec.motorista AS VARCHAR) ilike :search", { search: `%${search}%` })
 						query.orWhere("CAST(ec.lote AS VARCHAR) ilike :search", { search: `%${search}%` })
-						query.orWhere("CAST(p.sequencial AS VARCHAR) ilike :search", { search: `%${search}%` })
+						query.orWhere("CAST(ec.descricao AS VARCHAR) ilike :search", { search: `%${search}%` })
 					})
 				)
 				.addOrderBy("ec.placa", columnOrder[0])
@@ -143,10 +158,10 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 			const espelhosCarga = await this.repository
 				.createQueryBuilder("ec")
 				.select(['ec.id as "value"', "CONCAT(ec.placa, ' - ', ec.motorista) as \"label\""])
-				.leftJoin("ec.pedidoId", "p")
 				.where("ec.placa ilike :filter", { filter: `${filter}%` })
 				.orWhere("ec.motorista ilike :filter", { filter: `${filter}%` })
-				.addOrderBy("ec.placa")
+				.orWhere("ec.descricao ilike :filter", { filter: `${filter}%` })
+				.addOrderBy("ec.descricao")
 				.getRawMany()
 
 			return ok(espelhosCarga)
@@ -232,7 +247,8 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 						pi.produto as "produtoId",
 						CONCAT(p3.nome, ' - ', p3.descricao) as "produtoNome",
 						eci.quantidade as "quantidade", 
-						pi.id as "pacoteItemId"
+						pi.id as "pacoteItemId",
+						eci.confirmado as "confirmado"
 					FROM espelho_carga_items eci 
 					LEFT JOIN pacotes_items pi ON pi.id = eci.pacote_item_id 
 					LEFT JOIN pacotes p ON p.id = pi.pacote_id 
@@ -254,6 +270,7 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 					pacotesMap.set(pacoteId, {
 						id: pacoteId,
 						descricao: item.pacoteDescricao,
+						confirmado: item.confirmado || false,
 						items: [],
 					})
 				}
@@ -264,6 +281,7 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 					produto: item.produtoId,
 					produto_nome: item.produtoNome,
 					quantidade: item.quantidade?.toString() || "0",
+					confirmado: item.confirmado || false,
 				})
 			})
 

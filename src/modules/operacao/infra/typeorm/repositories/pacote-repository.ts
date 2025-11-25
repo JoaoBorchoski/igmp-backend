@@ -306,8 +306,6 @@ class PacoteRepository implements IPacoteRepository {
 
 	async updatePacoteItemStatus(id: string, espelhoCargaId: string): Promise<HttpResponse> {
 		try {
-			console.log("id", id)
-			console.log("espelhoCargaId", espelhoCargaId)
 			const isFromEspelhoCarga = await this.repository.query(
 				`
 				select ec.id

@@ -52,10 +52,6 @@ class CreatePedidoImportUseCase {
 		const queryRunner = getConnection().createQueryRunner()
 		await queryRunner.startTransaction()
 
-		console.log("pedido", pedido)
-		console.log("itens", itens)
-		console.log("itemsCriadosReq", itemsCriadosReq)
-
 		let browser
 		try {
 			const itensKit: any[] = []
@@ -222,12 +218,12 @@ class CreatePedidoImportUseCase {
 				todasEtiquetas.push({
 					produto: item.produto,
 					numero: item.unidade,
-					total: item.quantidadeTotal, // Usar a quantidade total original do produto
+					total: item.quantidadeTotal,
 					qrcode: qrcode,
-					torre: item.torre,
-					andar: item.andar,
-					apto: item.apto,
-					ambiente: item.ambiente,
+					torre: item.torre ?? "",
+					andar: item.andar ?? "",
+					apto: item.apto ?? "",
+					ambiente: item.ambiente ?? "",
 				})
 			}
 
@@ -259,23 +255,37 @@ class CreatePedidoImportUseCase {
 					const etiqueta = pagina[i]
 
 					etiquetasHTML += `
-                        <div style="border: 2px solid #000; padding: 12px; text-align: left; min-height: 180px; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 15px;">
+                        <div style="border: 2px solid #000; padding: 12px; text-align: left; height: 200px; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 15px;">
                             <div>
-                               
                                 <div style="margin-bottom: 6px; font-size: 11px;">
                                     <strong>Descrição:</strong> ${etiqueta.produto}
                                 </div>
                                 <div style="margin-bottom: 6px; font-size: 11px;">
-                                    <strong>Cliente:</strong> ${nome}
-                                </div>
-                                <div style="margin-bottom: 6px; font-size: 11px;">
-                                    <strong>Torre:</strong> ${etiqueta.torre} | <strong>Andar:</strong> ${etiqueta.andar} | <strong>Apto:</strong> ${etiqueta.apto} | <strong>Ambiente:</strong> ${etiqueta.ambiente}
+                                    <strong>Cliente:</strong> ${nome.toString().substring(0, 50)}
                                 </div>
                             </div>
-                            <div style="text-align: center; margin-top: auto;">
-                                <img src="${etiqueta.qrcode}" style="width: 100px; height: 100px; margin: 0 auto 5px; display: block;">
-                                <div style="font-size: 10px;">
-                                    Etiqueta ${etiqueta.numero} de ${etiqueta.total}
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: auto;">
+                                <div style="flex: 1; font-size: 11px;">
+                                    <div style="margin-bottom: 4px;"><strong>Torre:</strong> ${etiqueta.torre
+										.toString()
+										.substring(0, 35)}</div>
+                                    <div style="margin-bottom: 4px;"><strong>Andar:</strong> ${etiqueta.andar
+										.toString()
+										.substring(0, 15)}</div>
+                                    <div style="margin-bottom: 4px;"><strong>Apto:</strong> ${etiqueta.apto
+										.toString()
+										.substring(0, 15)}</div>
+                                    <div><strong>Ambiente:</strong> ${etiqueta.ambiente
+										.toString()
+										.substring(0, 35)}</div>
+                                </div>
+                                <div style="text-align: center; margin-left: 15px;">
+                                    <img src="${
+										etiqueta.qrcode
+									}" style="width: 100px; height: 100px; margin: 0 auto 5px; display: block;">
+                                    <div style="font-size: 10px;">
+                                        Etiqueta ${etiqueta.numero} de ${etiqueta.total}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -284,7 +294,7 @@ class CreatePedidoImportUseCase {
 
 				paginasHTML += `
                     <div class="pagina" style="page-break-after: always;">
-                        <h3>${newPedido.data.descricao} - Cliente: ${nome}</h3>
+						<h4>${(newPedido.data.descricao + " - " + " Cliente: " + nome).substring(0, 100)}</h4>
                         <div style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                             ${etiquetasHTML}
                         </div>

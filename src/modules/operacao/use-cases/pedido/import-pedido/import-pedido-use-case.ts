@@ -480,9 +480,8 @@ class ImportPedidosUseCase {
 			}
 
 			fs.unlinkSync(file.path)
-			await queryRunner.rollbackTransaction()
 			// await queryRunner.commitTransaction()
-			// return itensKit.length > 0 ? ok(pdfBuffer) : noContent()
+			await queryRunner.rollbackTransaction()
 			return ok(result)
 		} catch (error) {
 			// console.log("---------------")
