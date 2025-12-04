@@ -18,8 +18,13 @@ import { SelectProdutoController } from "@modules/configuracao/use-cases/produto
 import { UpdateProdutoController } from "@modules/configuracao/use-cases/produto/update-produto/update-produto-controller"
 import { GetProdutoController } from "@modules/configuracao/use-cases/produto/get-produto/get-produto-controller"
 import { MultiDeleteProdutoController } from "@modules/configuracao/use-cases/produto/multi-delete-produto/multi-delete-produto-controller"
+import { ImportProdutoController } from "@modules/configuracao/use-cases/produto/import-produto/import-produto-controller"
+
+import multer from "multer"
+import uploadConfig from "@config/upload"
 
 const produtoRoutes = Router()
+const uploadFiles = multer(uploadConfig)
 
 const createProdutoController = new CreateProdutoController()
 const listProdutoController = new ListProdutoController()
@@ -30,6 +35,7 @@ const getProdutoController = new GetProdutoController()
 const updateProdutoController = new UpdateProdutoController()
 const deleteProdutoController = new DeleteProdutoController()
 const multiDeleteProdutoController = new MultiDeleteProdutoController()
+const importProdutoController = new ImportProdutoController()
 
 produtoRoutes.post("/", ensureAuthenticated, createProdutoController.handle)
 produtoRoutes.post("/list", ensureAuthenticated, listProdutoController.handle)
@@ -40,5 +46,6 @@ produtoRoutes.get("/:id", ensureAuthenticated, getProdutoController.handle)
 produtoRoutes.put("/:id", ensureAuthenticated, updateProdutoController.handle)
 produtoRoutes.delete("/:id", ensureAuthenticated, deleteProdutoController.handle)
 produtoRoutes.delete("/", ensureAuthenticated, multiDeleteProdutoController.handle)
+produtoRoutes.post("/import", ensureAuthenticated, uploadFiles.single("arquivos"), importProdutoController.handle)
 
 export { produtoRoutes }

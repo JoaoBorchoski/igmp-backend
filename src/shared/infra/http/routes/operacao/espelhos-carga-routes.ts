@@ -9,6 +9,7 @@ import { UpdateEspelhoCargaController } from "@modules/operacao/use-cases/espelh
 import { DeleteEspelhoCargaController } from "@modules/operacao/use-cases/espelho-carga/delete-espelho-carga/delete-espelho-carga-controller"
 import { MultiDeleteEspelhoCargaController } from "@modules/operacao/use-cases/espelho-carga/multi-delete-espelho-carga/multi-delete-espelho-carga-controller"
 import { ensureAuthenticated } from "@shared/infra/http/middlewares/ensure-authenticated"
+import { ExportEspelhoCargaController } from "@modules/operacao/use-cases/espelho-carga/export-espelho-carga/export-espelho-carga-controller"
 
 const espelhosCargaRoutes = Router()
 
@@ -21,6 +22,7 @@ const getEspelhoCargaController = new GetEspelhoCargaController()
 const updateEspelhoCargaController = new UpdateEspelhoCargaController()
 const deleteEspelhoCargaController = new DeleteEspelhoCargaController()
 const multiDeleteEspelhoCargaController = new MultiDeleteEspelhoCargaController()
+const exportEspelhoCargaController = new ExportEspelhoCargaController()
 
 espelhosCargaRoutes.post("/", ensureAuthenticated, createEspelhoCargaController.handle)
 espelhosCargaRoutes.post("/list", ensureAuthenticated, listEspelhoCargaController.handle)
@@ -31,5 +33,6 @@ espelhosCargaRoutes.get("/:id", ensureAuthenticated, getEspelhoCargaController.h
 espelhosCargaRoutes.put("/:id", ensureAuthenticated, updateEspelhoCargaController.handle)
 espelhosCargaRoutes.delete("/:id", ensureAuthenticated, deleteEspelhoCargaController.handle)
 espelhosCargaRoutes.delete("/", ensureAuthenticated, multiDeleteEspelhoCargaController.handle)
+espelhosCargaRoutes.get("/export/:id", ensureAuthenticated, exportEspelhoCargaController.handle)
 
 export { espelhosCargaRoutes }

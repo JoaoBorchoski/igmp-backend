@@ -271,9 +271,9 @@ class PacoteRepository implements IPacoteRepository {
 				[pedidoId, pedidoItemId]
 			)
 
-			const quantidadeDisponivel = pacote[0].quantidade - quantidadeUsada[0].quantidade_usada
+			const quantidadeDisponivel = (pacote[0]?.quantidade ?? 0) - (quantidadeUsada[0]?.quantidade_usada ?? 0)
 
-			pacote[0].quantidadeDisponivel = quantidadeDisponivel
+			pacote[0] = { ...pacote[0], quantidadeDisponivel }
 
 			return ok(pacote[0])
 		} catch (err) {
@@ -317,8 +317,6 @@ class PacoteRepository implements IPacoteRepository {
 			`,
 				[espelhoCargaId, id]
 			)
-
-			console.log("isFromEspelhoCarga", isFromEspelhoCarga)
 
 			if (!isFromEspelhoCarga || isFromEspelhoCarga.length === 0) {
 				return conflictError("Pacote não pertence ao espelho de carga")

@@ -222,7 +222,8 @@ class ImportPedidosUseCase {
 				queryRunner.manager
 			)
 
-			const items = rows.slice(6, rows.length - 2)
+			const items = rows.slice(6, rows.length - 1)
+
 			const itensKit: ParsedPedidoItem[] = []
 			const itemsCriados: ItemCriado[] = []
 			const pacotesCriados: any[] = []
@@ -230,6 +231,8 @@ class ImportPedidosUseCase {
 
 			for await (const row of items) {
 				const pedidoItemParse: ParsedPedidoItem = await this.parseExcelData(row, queryRunner)
+
+				console.log("pedidoItemParse", pedidoItemParse)
 
 				// Validar se o parse foi bem-sucedido
 				if (!pedidoItemParse || !pedidoItemParse.produto) {
@@ -380,90 +383,90 @@ class ImportPedidosUseCase {
 			}
 
 			// Gerar HTML para cada página
-			let paginasHTML = ""
-			const logoDataUrl = fs
-				.readFileSync("/opt/projetos/igmp/backend/tmp/logo_IGMP-removebg-preview.png")
-				.toString("base64")
+			// let paginasHTML = ""
+			// const logoDataUrl = fs
+			// 	.readFileSync("/opt/projetos/igmp/backend/tmp/logo_IGMP-removebg-preview.png")
+			// 	.toString("base64")
 
-			paginas.forEach((pagina, paginaIndex) => {
-				let etiquetasHTML = ""
+			// paginas.forEach((pagina, paginaIndex) => {
+			// 	let etiquetasHTML = ""
 
-				// Etiquetas em coluna única (uma em cima da outra)
-				for (let i = 0; i < pagina.length; i++) {
-					const etiqueta = pagina[i]
+			// 	// Etiquetas em coluna única (uma em cima da outra)
+			// 	for (let i = 0; i < pagina.length; i++) {
+			// 		const etiqueta = pagina[i]
 
-					etiquetasHTML += `
-                        <div style="border: 2px solid #000; padding: 12px; text-align: left; min-height: 180px; display: flex; flex-direction: column; justify-content: space-between; margin: 0 auto 15px;">
-                            <div>
-                                <div style="text-align: center; margin-bottom: 8px;">
-                                    <img src="data:image/png;base64,${logoDataUrl}" style="height: 50px;">
-                                </div>
-                                <div style="margin-bottom: 6px; font-size: 12px;">
-                                    <strong>Descrição:</strong> ${etiqueta.produto}
-                                </div>
-                                <div style="margin-bottom: 6px; font-size: 12px;">
-                                    <strong>Cliente:</strong> ${nome}
-                                </div>
-                            </div>
-                            <div style="text-align: center; margin-top: auto;">
-                                <img src="${etiqueta.qrcode}" style="width: 150px; height: 150px; margin: 0 auto 5px; display: block;">
-                                <div style="font-size: 10px;">
-                                    Etiqueta ${etiqueta.numero} de ${etiqueta.total}
-                                </div>
-                            </div>
-                        </div>
-                    `
-				}
+			// 		etiquetasHTML += `
+			//             <div style="border: 2px solid #000; padding: 12px; text-align: left; min-height: 180px; display: flex; flex-direction: column; justify-content: space-between; margin: 0 auto 15px;">
+			//                 <div>
+			//                     <div style="text-align: center; margin-bottom: 8px;">
+			//                         <img src="data:image/png;base64,${logoDataUrl}" style="height: 50px;">
+			//                     </div>
+			//                     <div style="margin-bottom: 6px; font-size: 12px;">
+			//                         <strong>Descrição:</strong> ${etiqueta.produto}
+			//                     </div>
+			//                     <div style="margin-bottom: 6px; font-size: 12px;">
+			//                         <strong>Cliente:</strong> ${nome}
+			//                     </div>
+			//                 </div>
+			//                 <div style="text-align: center; margin-top: auto;">
+			//                     <img src="${etiqueta.qrcode}" style="width: 150px; height: 150px; margin: 0 auto 5px; display: block;">
+			//                     <div style="font-size: 10px;">
+			//                         Etiqueta ${etiqueta.numero} de ${etiqueta.total}
+			//                     </div>
+			//                 </div>
+			//             </div>
+			//         `
+			// 	}
 
-				paginasHTML += `
-                    <div class="pagina" style="page-break-after: always;">
-                        <h2>${pedido.data.descricao} - Cliente: ${nome}</h2>
-                        <div style="margin-top: 15px;"></div>
-                            ${etiquetasHTML}
-                        </div>
-                    </div>
-                `
-			})
+			// 	paginasHTML += `
+			//         <div class="pagina" style="page-break-after: always;">
+			//             <h2>${pedido.data.descricao} - Cliente: ${nome}</h2>
+			//             <div style="margin-top: 15px;"></div>
+			//                 ${etiquetasHTML}
+			//             </div>
+			//         </div>
+			//     `
+			// })
 
-			const htmlContent = `
-                <html>
-                    <head>
-                        <title>IGMP - PACOTE</title>
-                        <style>
-                            body {
-                                font-family: Arial, sans-serif;
-                                padding: 20px;
-                                text-align: center;
-                            }
-                            .nome {
-                                color: #6495ED;
-                            }
-                            .pagina:last-child {
-                                page-break-after: auto;
-                            }
-                            @media print {
-                                .pagina {
-                                    page-break-after: always;
-                                }
-                                .pagina:last-child {
-                                    page-break-after: auto;
-                                }
-                            }
-                        </style>
-                    </head>
-                    <body>
-                        ${paginasHTML}
-                    </body>
-                </html>
-            `
+			// const htmlContent = `
+			//     <html>
+			//         <head>
+			//             <title>IGMP - PACOTE</title>
+			//             <style>
+			//                 body {
+			//                     font-family: Arial, sans-serif;
+			//                     padding: 20px;
+			//                     text-align: center;
+			//                 }
+			//                 .nome {
+			//                     color: #6495ED;
+			//                 }
+			//                 .pagina:last-child {
+			//                     page-break-after: auto;
+			//                 }
+			//                 @media print {
+			//                     .pagina {
+			//                         page-break-after: always;
+			//                     }
+			//                     .pagina:last-child {
+			//                         page-break-after: auto;
+			//                     }
+			//                 }
+			//             </style>
+			//         </head>
+			//         <body>
+			//             ${paginasHTML}
+			//         </body>
+			//     </html>
+			// `
 
-			const page = await browser.newPage()
-			await page.setContent(htmlContent)
+			// const page = await browser.newPage()
+			// await page.setContent(htmlContent)
 
-			const pdfBuffer = await page.pdf({
-				format: "A4",
-				printBackground: true,
-			})
+			// const pdfBuffer = await page.pdf({
+			// 	format: "A4",
+			// 	printBackground: true,
+			// })
 
 			await browser.close()
 
