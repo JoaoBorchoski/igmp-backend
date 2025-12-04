@@ -436,6 +436,42 @@ class ProdutoRepository implements IProdutoRepository {
 			return serverError(err)
 		}
 	}
+
+	async findByCodeAndDescriptionWithQueryRunner(
+		code: string,
+		description: string,
+		transactionManager: EntityManager
+	): Promise<HttpResponse> {
+		try {
+			const search = `${code} - ${description}`
+
+			// Verificar se a transação ainda está ativa
+			if (!transactionManager.queryRunner || !transactionManager.queryRunner.isTransactionActive) {
+				// console.log("ERRO: Transação não está mais ativa!")
+				return serverError(new Error("Transação não está mais ativa"))
+			}
+
+			const produto = await transactionManager
+				.createQueryBuilder(Produto, "prod")
+				.select([
+					'prod.id as "id"',
+					'prod.nome as "nome"',
+					'prod.descricao as "descricao"',
+					'prod.tipo as "tipo"',
+				])
+				.where("prod.nome || ' - ' || prod.descricao ilike :search", { search: `%${search}%` })
+				.getRawOne()
+
+			if (!produto) {
+				return noContent()
+			}
+
+			return ok(produto)
+		} catch (err) {
+			console.log("Error in findByCodeAndDescriptionWithQueryRunner:", err)
+			return serverError(err)
+		}
+	}
 }
 
 export { ProdutoRepository }

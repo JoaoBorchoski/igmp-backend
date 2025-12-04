@@ -58,7 +58,11 @@ class ImportProdutoUseCase {
 					tipo: row.grupo == "AC" ? 0 : 1,
 				}
 
-				const produto = await this.produtoRepository.findByNameWithQueryRunner(prod.nome, queryRunner.manager)
+				const produto = await this.produtoRepository.findByCodeAndDescriptionWithQueryRunner(
+					prod.nome,
+					prod.descricao,
+					queryRunner.manager
+				)
 
 				if (produto.statusCode === 200 && produto.data) {
 					continue
@@ -67,37 +71,6 @@ class ImportProdutoUseCase {
 				const newProduto = await this.produtoRepository.createWithQueryRunner(prod, queryRunner.manager)
 
 				result.push(newProduto)
-
-				//Cliente import logic
-				// const estado = await this.estadoRepository.getByName(row.estado)
-				// const cidade = await this.cidadeRepository.getByName(row.cidade, estado.data.id)
-				// // console.log("Estado:", estado)
-				// // console.log("Cidade:", cidade)
-				// // console.log("Row:", row)
-				// await this.clienteRepository.createWithQueryRunner(
-				//     {
-				//         nome: row.nome,
-				//         cpf: row.cpf.replace(/\D/g, ""),
-				//         telefone: row.telefone,
-				//         email: row.nome.replace(/\s/g, "").toLowerCase() + "@mail.com",
-				//         cidadeId: cidade.data.id,
-				//         estadoId: estado.data.id,
-				//     },
-				//     queryRunner.manager
-				// )
-				//
-				//
-				//
-				// Produto import logic
-				// const produtoData = await this.produtoRepository.createWithQueryRunner(
-				// 	{
-				// 		nome: row.codigo,
-				// 		descricao: row.descricao,
-				// 		tipo: row.grupo == "AC" ? 0 : 1,
-				// 	},
-				// 	queryRunner.manager
-				// )
-				// result.push(produtoData)
 			}
 
 			await queryRunner.commitTransaction()

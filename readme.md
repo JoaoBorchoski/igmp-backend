@@ -6,17 +6,17 @@ O projeto **igmp**, plataforma Web e Mobile para Controle de Produção Industri
 
 Para que a aplicação possa ser executada e testada em ambiente local de desenvolvimento, alguns itens de software devem estar previamente instalados.
 
-- Node.js [(Guia de Instalação)](https://nodejs.org/en/download/package-manager/)
-- Yarn [(Guia de Instalação)](https://classic.yarnpkg.com/lang/en/docs/install), caso prefira usar no lugar do npm. Neste documento o Yarn será utilizado nos procedimentos.
-- Docker [(Guia de Instalação)](https://docs.docker.com/engine/install/)
-- Docker Compose [(Guia de Instalação)](https://docs.docker.com/compose/install/)
-- Postman [(Guia de Instalação)](https://www.postman.com/downloads/) ou Insomnia [(Guia de Instalação)](https://insomnia.rest/download)
-- Conta de e-mail fake para testes no Ethereal [(Criação de conta fake)](https://ethereal.login/create)
+-   Node.js [(Guia de Instalação)](https://nodejs.org/en/download/package-manager/)
+-   Yarn [(Guia de Instalação)](https://classic.yarnpkg.com/lang/en/docs/install), caso prefira usar no lugar do npm. Neste documento o Yarn será utilizado nos procedimentos.
+-   Docker [(Guia de Instalação)](https://docs.docker.com/engine/install/)
+-   Docker Compose [(Guia de Instalação)](https://docs.docker.com/compose/install/)
+-   Postman [(Guia de Instalação)](https://www.postman.com/downloads/) ou Insomnia [(Guia de Instalação)](https://insomnia.rest/download)
+-   Conta de e-mail fake para testes no Ethereal [(Criação de conta fake)](https://ethereal.login/create)
 
 ## Requisitos opcionais
 
-- **Editor SQL**: Beekeeper Studio [(Download)](https://www.beekeeperstudio.io/), DBeaver Community [(Download)](https://dbeaver.io/download/)
-- **Controlador de fila**: RabbitMq [(Guia de Instalação no Ubuntu)](https://www.cherryservers.com/blog/how-to-install-and-start-using-rabbitmq-on-ubuntu-22-04) 
+-   **Editor SQL**: Beekeeper Studio [(Download)](https://www.beekeeperstudio.io/), DBeaver Community [(Download)](https://dbeaver.io/download/)
+-   **Controlador de fila**: RabbitMq [(Guia de Instalação no Ubuntu)](https://www.cherryservers.com/blog/how-to-install-and-start-using-rabbitmq-on-ubuntu-22-04)
 
 <br>
 
@@ -33,7 +33,7 @@ Para que a aplicação possa ser executada e testada em ambiente local de desenv
 ```
   yarn
 ```
-  
+
 <br>
   
 ### Início rápido com servidor PostgreSQL já instalado
@@ -41,7 +41,7 @@ Para que a aplicação possa ser executada e testada em ambiente local de desenv
 Antes que qualquer comando possa ser executado, é necessário que o caminho onde os binários do PostgreSQL estão localizados, seja adicionado ao PATH do sistema operacional.
 
 No Windows para a versão 14 do PostgreSQL seria por exemplo: "C:\Program Files\PostgreSQL\14\bin".
-  
+
 Agora um passo a passo para iniciar a aplicação de forma rápida.
 
 Abra uma nova seção de linha de comando. Mude para a pasta onde se encontra a aplicação. Nesta janela digite os seguintes comandos para criar usuário e banco de dados para a aplicação:
@@ -60,7 +60,7 @@ Abra uma nova seção de linha de comando. Mude para a pasta onde se encontra a 
 
 Na mesma pasta do passo anterior onde será executada a aplicação, digite os comandos:
 
-```  
+```
   yarn run typeorm migration:run
   yarn run seed:admin
   yarn run dev
@@ -82,7 +82,7 @@ Abra uma nova seção de linha de comando. Mude para a pasta onde se encontra a 
 
 Abra uma nova seção de linha de comando, na mesma pasta do passo anterior, onde será executada a aplicação:
 
-```  
+```
   yarn run typeorm migration:run
   yarn run seed:admin
   yarn run dev
@@ -97,7 +97,7 @@ Testar o acesso a API através do Swagger UI em: [http://localhost:3333/api-docs
 Para iniciar os containers com a exibição contínua do log, que auxiliará na depuração inicial do ambiente, digite os comandos a seguir.
 
 A sessão do terminal permanecerá ativa, até que sejam pressionadas as teclas CTRL+C duas vezes seguidas. Neste modo o PostgreSQL e o Redis somente estarão disponíveis para a aplicação, enquanto essa janela estiver aberta.
-  
+
 Para que os containers rodem em background, devem ser seguidos os passos da seção **Containers em Background**
 
 ```
@@ -192,23 +192,22 @@ Para iniciar os containers em background:
 
 Antes de executar os passos a seguir, é importante verificar se o container do PostgreSQL está em execução.
 
-
-- Executar as migrations do TypeORM para criação das tabelas no banco de dados:
-
-```
-  yarn run typeorm migration:run    
-```
-
-- Caso precise reverter a última migration:
+-   Executar as migrations do TypeORM para criação das tabelas no banco de dados:
 
 ```
-  yarn run typeorm migration:revert    
+  yarn run typeorm migration:run
 ```
 
-- Executar o seed da tabela de usuarios, criando o usuario "admin", com a senha "admin":
+-   Caso precise reverter a última migration:
 
 ```
-  yarn run seed:admin    
+  yarn run typeorm migration:revert
+```
+
+-   Executar o seed da tabela de usuarios, criando o usuario "admin", com a senha "admin":
+
+```
+  yarn run seed:admin
 ```
 
 <br>
@@ -229,13 +228,12 @@ Para acionar a fila basta que no arquivo .env você altrere as configurações d
 
 ### Executar e testar a aplicação
 
-
-- Executar a aplicação:
+-   Executar a aplicação:
 
 ```
-  yarn run dev    
+  yarn run dev
 ```
 
-- Testar o acesso a API através do Swagger UI em: [http://localhost:3333/api-docs](http://localhost:3333/api-docs)
+-   Testar o acesso a API através do Swagger UI em: [http://localhost:3333/api-docs](http://localhost:3333/api-docs)
 
 <br>
