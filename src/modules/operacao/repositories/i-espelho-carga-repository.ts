@@ -37,6 +37,8 @@ interface IEspelhoCargaRepository {
 	// delete
 	delete(id: string): Promise<HttpResponse>
 
+	deleteWithQueryRunner(id: string, transactionManager: EntityManager): Promise<HttpResponse>
+
 	// multi delete
 	multiDelete(ids: string[]): Promise<HttpResponse>
 }

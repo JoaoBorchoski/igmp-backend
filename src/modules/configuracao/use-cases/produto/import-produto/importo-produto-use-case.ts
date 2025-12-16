@@ -39,6 +39,41 @@ class ImportProdutoUseCase {
 		})
 	}
 
+	async processSingleRow(row: any): Promise<HttpResponse> {
+		const queryRunner = getConnection().createQueryRunner()
+		await queryRunner.startTransaction()
+
+		try {
+			const prod = {
+				nome: row["Código"],
+				descricao: row["Descrição"],
+				tipo: row.grupo == "AC" ? 0 : 1,
+			}
+
+			const produto = await this.produtoRepository.findByCodeAndDescriptionWithQueryRunner(
+				prod.nome,
+				prod.descricao,
+				queryRunner.manager
+			)
+
+			if (produto.statusCode === 200 && produto.data) {
+				await queryRunner.commitTransaction()
+				return ok({ message: "Produto já existe", produto: produto.data })
+			}
+
+			const newProduto = await this.produtoRepository.createWithQueryRunner(prod, queryRunner.manager)
+
+			await queryRunner.commitTransaction()
+			return ok(newProduto)
+		} catch (error) {
+			console.error("Error processing row:", error)
+			await queryRunner.rollbackTransaction()
+			return serverError(error)
+		} finally {
+			await queryRunner.release()
+		}
+	}
+
 	async execute(request: IRequest): Promise<HttpResponse> {
 		const queryRunner = getConnection().createQueryRunner()
 		await queryRunner.startTransaction()

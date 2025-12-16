@@ -237,15 +237,15 @@ class CreatePedidoImportUseCase {
 
 			// Gerar HTML para cada página
 			let paginasHTML = ""
-			let logoDataUrl = ""
-			try {
-				logoDataUrl = fs
-					.readFileSync("/opt/projetos/igmp/backend/tmp/logo_IGMP-removebg-preview.png")
-					.toString("base64")
-			} catch (logoError) {
-				console.warn("Logo não encontrado, continuando sem logo:", logoError)
-				logoDataUrl = ""
-			}
+			// let logoDataUrl = ""
+			// try {
+			// 	logoDataUrl = fs
+			// 		.readFileSync("/opt/projetos/igmp/backend/tmp/logo_IGMP-removebg-preview.png")
+			// 		.toString("base64")
+			// } catch (logoError) {
+			// 	console.warn("Logo não encontrado, continuando sem logo:", logoError)
+			// 	logoDataUrl = ""
+			// }
 
 			paginas.forEach((pagina, paginaIndex) => {
 				let etiquetasHTML = ""

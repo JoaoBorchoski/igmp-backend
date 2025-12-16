@@ -45,6 +45,7 @@ interface PedidoCabecalho {
 	rua: string
 	bairro: string
 	cidade: string
+	referencia: string
 }
 
 // Tipagem para item criado (usado na geração de etiquetas)
@@ -105,7 +106,6 @@ class ImportPedidosUseCase {
 
 	async parseExcelData(row: ExcelRow, queryRunner: QueryRunner): Promise<ParsedPedidoItem> {
 		try {
-			// Validar se os dados necessários existem
 			if (!row || !row["Ordem de embarque"]) {
 				throw new AppError(`Dados inválidos na linha: ${JSON.stringify(row)}`)
 			}
@@ -115,16 +115,9 @@ class ImportPedidosUseCase {
 				throw new AppError(`Nome do produto vazio na linha: ${JSON.stringify(row)}`)
 			}
 
-			// console.log(`Buscando produto: "${nomeProduto}"`)
-
 			const produtoId = await this.produtoRepository.findByNameWithQueryRunner(nomeProduto, queryRunner.manager)
-			// console.log("++++++++++")
-			// console.log("produtoId", produtoId)
-			// console.log("++++++++++")
 
-			// Verificar se houve erro na busca (transação abortada)
 			if (produtoId.statusCode === 500) {
-				// console.log("ERRO: Transação abortada durante busca do produto!")
 				throw new AppError(`Transação abortada ao buscar produto: ${nomeProduto}`)
 			}
 
@@ -139,8 +132,6 @@ class ImportPedidosUseCase {
 			} else {
 				const descricaoProduto = row["__EMPTY"] ? row["__EMPTY"].toString().trim() : ""
 
-				// console.log(`Criando novo produto: "${nomeProduto}" com descrição: "${descricaoProduto}"`)
-
 				const newProduto = await this.produtoRepository.createWithQueryRunner(
 					{
 						nome: nomeProduto,
@@ -149,11 +140,8 @@ class ImportPedidosUseCase {
 					},
 					queryRunner.manager
 				)
-				// console.log("newProduto", newProduto)
 
-				// Verificar se houve erro na criação (transação abortada)
 				if (newProduto.statusCode === 500) {
-					// console.log("ERRO: Transação abortada durante criação do produto!")
 					throw new AppError(`Transação abortada ao criar produto: ${nomeProduto}`)
 				}
 
@@ -167,13 +155,15 @@ class ImportPedidosUseCase {
 					produto: newProduto.data.id,
 					produtoNome: nomeProduto,
 					quantidade: row["__EMPTY_3"] ? parseInt(row["__EMPTY_3"].toString()) : 0,
-					kit: row["__EMPTY"] ? row["__EMPTY"].toString().includes("KT") : false,
+					kit: row["__EMPTY"]
+						? row["__EMPTY"].toString().includes("KT") || row["__EMPTY"].toString().includes("KIT")
+						: false,
 				}
 				return result
 			}
 		} catch (error) {
 			// console.log("Error in parseExcelData:", error)
-			throw error // Propagar o erro para cima
+			throw error
 		}
 	}
 
@@ -203,6 +193,7 @@ class ImportPedidosUseCase {
 				rua: rows[2]["Ordem de embarque"].toString().split(": ")[1],
 				bairro: rows[2]["__EMPTY_2"].toString().split(": ")[1],
 				cidade: rows[2]["__EMPTY_5"].toString().split(": ")[1],
+				referencia: rows[3]["__EMPTY_5"].toString().split(": ")[1] ?? "",
 			}
 
 			const {
@@ -215,7 +206,7 @@ class ImportPedidosUseCase {
 
 			const pedido = await this.pedidoRepository.createWithQueryRunner(
 				{
-					descricao: cabecalho.pedido,
+					descricao: cabecalho.pedido + " - " + cabecalho.referencia,
 					cliente: id,
 					dataEmissao: new Date(cabecalho.dataEmissao),
 				},
@@ -232,7 +223,7 @@ class ImportPedidosUseCase {
 			for await (const row of items) {
 				const pedidoItemParse: ParsedPedidoItem = await this.parseExcelData(row, queryRunner)
 
-				console.log("pedidoItemParse", pedidoItemParse)
+				// console.log("pedidoItemParse", pedidoItemParse)
 
 				// Validar se o parse foi bem-sucedido
 				if (!pedidoItemParse || !pedidoItemParse.produto) {

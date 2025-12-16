@@ -27,13 +27,6 @@ class CreateEspelhoCargaUseCase {
 		const queryRunner = getConnection().createQueryRunner()
 		await queryRunner.startTransaction()
 
-		console.log("espelhoCargaItems", espelhoCargaItems)
-		console.log("pedidoId", pedidoId)
-		console.log("placa", placa)
-		console.log("motorista", motorista)
-		console.log("lote", lote)
-		console.log("descricao", descricao)
-
 		try {
 			const result = await this.espelhoCargaRepository
 				.createWithQueryRunner(
@@ -53,12 +46,10 @@ class CreateEspelhoCargaUseCase {
 					return error
 				})
 
-			console.log("result", result)
-
 			const items = espelhoCargaItems.reduce((acc, item) => [...acc, ...item.items], [])
 
 			for await (const item of items) {
-				await this.espelhoCargaItemsRepository.createWithQueryRunner(
+				const itemResult = await this.espelhoCargaItemsRepository.createWithQueryRunner(
 					{
 						espelhoCargaId: result.data.id,
 						pacoteItemId: item.id,
@@ -66,6 +57,7 @@ class CreateEspelhoCargaUseCase {
 					},
 					queryRunner.manager
 				)
+				console.log("itemResult", itemResult)
 			}
 
 			await queryRunner.commitTransaction()

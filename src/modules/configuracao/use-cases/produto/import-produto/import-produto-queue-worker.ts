@@ -5,7 +5,10 @@ import path from "path"
 import uploadConfig from "@config/upload"
 
 interface IJobData {
-	filePath: string
+	type: "process_row" | "cleanup_file"
+	row?: any
+	rowIndex?: number
+	totalRows?: number
 	fileName: string
 	originalName: string
 }
@@ -13,43 +16,40 @@ interface IJobData {
 class ImportProdutoQueueWorker {
 	async processJob(jobData: IJobData): Promise<void> {
 		try {
-			console.log(`[ImportProdutoWorker] Processing file: ${jobData.fileName}`)
-
-			// Verifica se o arquivo existe
-			const fullPath = path.join(uploadConfig.tmpFolder, jobData.fileName)
-			if (!fs.existsSync(fullPath)) {
-				throw new Error(`File not found: ${fullPath}`)
+			if (jobData.type === "cleanup_file") {
+				// Job de limpeza: remove o arquivo
+				const fullPath = path.join(uploadConfig.tmpFolder, jobData.fileName)
+				if (fs.existsSync(fullPath)) {
+					fs.unlinkSync(fullPath)
+					console.log(`[ImportProdutoWorker] File deleted: ${jobData.fileName}`)
+				}
+				return
 			}
 
-			// Cria um objeto file compatível com Express.Multer.File
-			const file: Express.Multer.File = {
-				fieldname: "arquivos",
-				originalname: jobData.originalName,
-				encoding: "7bit",
-				mimetype: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-				destination: uploadConfig.tmpFolder,
-				filename: jobData.fileName,
-				path: fullPath,
-				size: fs.statSync(fullPath).size,
-			} as Express.Multer.File
+			// Job de processamento de linha
+			if (jobData.type !== "process_row" || !jobData.row) {
+				throw new Error("Invalid job data: missing row data")
+			}
+
+			// console.log(
+			// 	`[ImportProdutoWorker] Processing row ${jobData.rowIndex}/${jobData.totalRows} from file: ${jobData.fileName}`
+			// )
 
 			// Resolve o use case do container
 			const importProdutoUseCase = container.resolve(ImportProdutoUseCase)
 
-			// Processa a importação
-			const result = await importProdutoUseCase.execute({ file })
+			// Processa a linha individual
+			const result = await importProdutoUseCase.processSingleRow(jobData.row)
 
-			if (result.statusCode !== 200) {
-				throw new Error(`Import failed: ${JSON.stringify(result.data)}`)
+			if (result.statusCode === 200) {
+				// console.log(`[ImportProdutoWorker] Successfully processed row ${jobData.rowIndex}/${jobData.totalRows}`)
+			} else {
+				// console.error(
+				// 	`[ImportProdutoWorker] Error processing row ${jobData.rowIndex}/${jobData.totalRows}:`,
+				// 	result.data
+				// )
+				// Não lança erro para não reenviar o job, apenas loga
 			}
-
-			// Remove o arquivo após processamento
-			if (fs.existsSync(fullPath)) {
-				fs.unlinkSync(fullPath)
-				console.log(`[ImportProdutoWorker] File deleted: ${jobData.fileName}`)
-			}
-
-			console.log(`[ImportProdutoWorker] Successfully processed: ${jobData.fileName}`)
 		} catch (error) {
 			console.error(`[ImportProdutoWorker] Error processing job:`, error)
 			throw error

@@ -40,7 +40,6 @@ class CreatePacoteUseCase {
 			const pedido = await this.pedidoRepository.get(pedidoId)
 			const numPacotes = await this.pacoteRepository.getNumeroPacotesByPedidoId(pedidoId)
 
-			// const itemsComQuantidadeExedida = []
 			const itemsCriados = []
 			const result = await this.pacoteRepository.createWithQueryRunner(
 				{
@@ -52,22 +51,6 @@ class CreatePacoteUseCase {
 
 			if (!!pedidoId) {
 				for await (const item of pacoteItems) {
-					// const quantidade = await this.pacoteItemRepository.getQuantidadeByPedidoIdAndProdutoId(
-					//     pedidoId,
-					//     item.produtoId
-					// )
-					// const pedidoItem = await this.pedidoItemRepository.getByPedidoIdAndProduto(pedidoId, item.produtoId)
-
-					// if (+item.quantidade + +quantidade.data.quantidadeUsada > +pedidoItem.data.quantidade) {
-					//     itemsComQuantidadeExedida.push({
-					//         produto: item.produto,
-					//         quantidade: item.quantidade,
-					//         quantidadeUsada: quantidade.data.quantidadeUsada,
-					//         quantidadeDisponivel: pedidoItem.data.quantidade - quantidade.data.quantidadeUsada,
-					//     })
-					//     continue
-					// }
-
 					const pacoteItem = await this.pacoteItemRepository.createWithQueryRunner(
 						{
 							pacoteId: result.data.id,
@@ -77,6 +60,7 @@ class CreatePacoteUseCase {
 							quantidadeCabeceira: item.quantidadeCabeceira,
 							quantidadeLateralCabeceira: item.quantidadeLateralCabeceira,
 							tipoItem: item.tipoItem,
+							descricao: item.descricao,
 						},
 						queryRunner.manager
 					)
@@ -90,33 +74,53 @@ class CreatePacoteUseCase {
 						(pacoteItem.data.quantidadeLateralCabeceira && pacoteItem.data.quantidadeLateralCabeceira > 0)
 
 					if (temQuantidadesEspecificas) {
+						const descricoes = []
+
+						if (pacoteItem.data.quantidadeLateral) {
+							descricoes.push(`Lateral: ${pacoteItem.data.quantidadeLateral} PÇS`)
+						}
+
+						if (pacoteItem.data.quantidadeCabeceira) {
+							descricoes.push(`Cabeceira: ${pacoteItem.data.quantidadeCabeceira} PÇS`)
+						}
+
+						if (pacoteItem.data.quantidadeLateralCabeceira) {
+							descricoes.push(`Lateral da Cabeceira: ${pacoteItem.data.quantidadeLateralCabeceira} PÇS`)
+						}
+
+						itemsCriados.push({
+							produto: produtoCriado.data.nomeCompleto,
+							quantidade: 0,
+							tipo: "Conjunto",
+							descricao: descricoes.join(" - "),
+						})
+
 						// Adicionar linhas específicas para cada tipo de quantidade que tiver valor
-						if (pacoteItem.data.quantidadeLateral && pacoteItem.data.quantidadeLateral > 0) {
-							itemsCriados.push({
-								produto: produtoCriado.data.nomeCompleto,
-								quantidade: pacoteItem.data.quantidadeLateral,
-								tipo: "Lateral",
-							})
-						}
-						if (pacoteItem.data.quantidadeCabeceira && pacoteItem.data.quantidadeCabeceira > 0) {
-							itemsCriados.push({
-								produto: produtoCriado.data.nomeCompleto,
-								quantidade: pacoteItem.data.quantidadeCabeceira,
-								tipo: "Cabeceira",
-							})
-						}
-						if (
-							pacoteItem.data.quantidadeLateralCabeceira &&
-							pacoteItem.data.quantidadeLateralCabeceira > 0
-						) {
-							itemsCriados.push({
-								produto: produtoCriado.data.nomeCompleto,
-								quantidade: pacoteItem.data.quantidadeLateralCabeceira,
-								tipo: "Lateral da Cabeceira",
-							})
-						}
+						// if (pacoteItem.data.quantidadeLateral && pacoteItem.data.quantidadeLateral > 0) {
+						// 	itemsCriados.push({
+						// 		produto: produtoCriado.data.nomeCompleto,
+						// 		quantidade: pacoteItem.data.quantidadeLateral,
+						// 		tipo: "Lateral",
+						// 	})
+						// }
+						// if (pacoteItem.data.quantidadeCabeceira && pacoteItem.data.quantidadeCabeceira > 0) {
+						// 	itemsCriados.push({
+						// 		produto: produtoCriado.data.nomeCompleto,
+						// 		quantidade: pacoteItem.data.quantidadeCabeceira,
+						// 		tipo: "Cabeceira",
+						// 	})
+						// }
+						// if (
+						// 	pacoteItem.data.quantidadeLateralCabeceira &&
+						// 	pacoteItem.data.quantidadeLateralCabeceira > 0
+						// ) {
+						// 	itemsCriados.push({
+						// 		produto: produtoCriado.data.nomeCompleto,
+						// 		quantidade: pacoteItem.data.quantidadeLateralCabeceira,
+						// 		tipo: "Lateral da Cabeceira",
+						// 	})
+						// }
 					} else {
-						// Manter a lógica atual quando apenas o campo quantidade tiver valor
 						itemsCriados.push({
 							produto: produtoCriado.data.nomeCompleto,
 							quantidade: pacoteItem.data.quantidade,
@@ -142,16 +146,6 @@ class CreatePacoteUseCase {
 					})
 				}
 			}
-
-			// if (itemsComQuantidadeExedida.length > 0) {
-			//     await queryRunner.rollbackTransaction()
-			//     const message = itemsComQuantidadeExedida
-			//         .map((item) => {
-			//             return `Produto: ${item.produto}, Quantidade Requerida: ${item.quantidade}, Quantidade Usada: ${item.quantidadeUsada}, Quantidade Disponível: ${item.quantidadeDisponivel}`
-			//         })
-			//         .join("   ---   ")
-			//     return createError(410, `Quantidade excedida para os seguintes itens: ${message}`)
-			// }
 
 			const qrCodeDados = {
 				pacoteId: result.data.id,
@@ -213,7 +207,7 @@ class CreatePacoteUseCase {
                                 ${itemsCriados
 									.map((item) => {
 										if (item.tipo) {
-											return `<li>${item.produto} - ${item.tipo} = ${item.quantidade} PÇS</li>`
+											return `<li>${item.produto} - ${item.descricao}</li>`
 										} else {
 											return `<li>${item.produto} = ${item.quantidade} PÇS</li>`
 										}
@@ -231,6 +225,16 @@ class CreatePacoteUseCase {
                                     <div>
                                         ${pedido.data.clienteNome ? `<h1>LOTE ${pedido.data.clienteNome}</h1>` : ""}
                                         <h1>${(() => {
+											const desc = pedido?.data?.descricao
+												?.split(":")[1]
+												?.split(" - ")
+												?.reverse()
+												?.join(" - ")
+
+											if (desc) {
+												return desc
+											}
+
 											if (!pedido.data) {
 												return new Date().toLocaleDateString("pt-BR", {
 													year: "numeric",
@@ -238,6 +242,7 @@ class CreatePacoteUseCase {
 													day: "2-digit",
 												})
 											}
+
 											const [day, month, year] = pedido.data.dataEmissao.split("/")
 											const formattedDateString = `${day.padStart(2, "0")}${month.padStart(
 												2,
@@ -276,7 +281,6 @@ class CreatePacoteUseCase {
 
 			await browser.close()
 
-			// await queryRunner.rollbackTransaction()
 			await queryRunner.commitTransaction()
 
 			return ok(pdfBuffer)

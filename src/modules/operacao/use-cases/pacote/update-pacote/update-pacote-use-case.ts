@@ -81,6 +81,7 @@ class UpdatePacoteUseCase {
 							quantidadeCabeceira: item.quantidadeCabeceira,
 							quantidadeLateralCabeceira: item.quantidadeLateralCabeceira,
 							tipoItem: item.tipoItem,
+							descricao: item.descricao,
 						},
 						queryRunner.manager
 					)

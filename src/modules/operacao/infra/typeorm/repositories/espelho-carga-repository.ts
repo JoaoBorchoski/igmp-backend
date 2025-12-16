@@ -372,6 +372,16 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 		}
 	}
 
+	async deleteWithQueryRunner(id: string, transactionManager: EntityManager): Promise<HttpResponse> {
+		try {
+			await transactionManager.delete(EspelhoCarga, id)
+
+			return noContent()
+		} catch (err) {
+			return serverError(err)
+		}
+	}
+
 	// multi delete
 	async multiDelete(ids: string[]): Promise<HttpResponse> {
 		try {

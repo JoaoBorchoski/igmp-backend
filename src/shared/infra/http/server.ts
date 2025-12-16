@@ -3,7 +3,7 @@ import { mqWorkerRun } from "@shared/infra/mq/mq-worker-run"
 import { startImportProdutoWorker } from "@shared/infra/mq/import-produto-worker-run"
 import "dotenv/config"
 
-const port = "5500"
+const port = "3333"
 
 app.listen(port, () => console.log(`Server is running on port ${port}!`))
 
