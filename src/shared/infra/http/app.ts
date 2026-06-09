@@ -40,8 +40,14 @@ app.use(express.urlencoded({ extended: true, limit: "100mb" }))
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerFile))
 app.use("/avatar", express.static(`${upload.tmpFolder}/avatar`))
 
-//const allowedOrigins = ['*']
-const allowedOrigins = "*"
+// Allowlist comes from FRONTEND_URL (comma-separated). Falls back to "*" for local dev.
+const frontendOrigins = (process.env.FRONTEND_URL || "")
+	.split(",")
+	.map((origin) => origin.trim())
+	.filter(Boolean)
+
+const allowedOrigins: cors.CorsOptions["origin"] =
+	frontendOrigins.length > 0 ? frontendOrigins : "*"
 
 const options: cors.CorsOptions = {
 	origin: allowedOrigins,
