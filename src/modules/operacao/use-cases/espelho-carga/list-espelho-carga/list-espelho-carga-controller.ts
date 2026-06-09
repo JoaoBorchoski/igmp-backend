@@ -1,6 +1,6 @@
-import { Request, Response } from "express"
-import { container } from "tsyringe"
-import { ListEspelhoCargaUseCase } from "./list-espelho-carga-use-case"
+import { Request, Response } from 'express'
+import { container } from 'tsyringe'
+import { ListEspelhoCargaUseCase } from './list-espelho-carga-use-case'
 
 class ListEspelhoCargaController {
 	async handle(request: Request, response: Response): Promise<Response> {

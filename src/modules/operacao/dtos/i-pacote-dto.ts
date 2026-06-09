@@ -1,10 +1,11 @@
 interface IPacoteDTO {
-    id?: string
-    pedidoId?: string
-    descricao?: string
-    createdAt?: Date
-    updatedAt?: Date
-    sequencial?: number
+	id?: string
+	pedidoId?: string
+	descricao?: string
+	createdAt?: Date
+	updatedAt?: Date
+	sequencial?: number
+	cor?: string
 }
 
 export { IPacoteDTO }

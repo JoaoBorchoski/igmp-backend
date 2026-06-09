@@ -1,9 +1,9 @@
-import { Brackets, EntityManager, getRepository, Repository } from "typeorm"
-import { IEspelhoCargaDTO } from "@modules/operacao/dtos/i-espelho-carga-dto"
-import { IEspelhoCargaRepository } from "@modules/operacao/repositories/i-espelho-carga-repository"
-import { EspelhoCarga } from "@modules/operacao/infra/typeorm/entities/espelho-carga"
-import { noContent, serverError, ok, notFound, HttpResponse } from "@shared/helpers"
-import { AppError } from "@shared/errors/app-error"
+import { Brackets, EntityManager, getRepository, Repository } from 'typeorm'
+import { IEspelhoCargaDTO } from '@modules/operacao/dtos/i-espelho-carga-dto'
+import { IEspelhoCargaRepository } from '@modules/operacao/repositories/i-espelho-carga-repository'
+import { EspelhoCarga } from '@modules/operacao/infra/typeorm/entities/espelho-carga'
+import { noContent, serverError, ok, notFound, HttpResponse } from '@shared/helpers'
+import { AppError } from '@shared/errors/app-error'
 
 class EspelhoCargaRepository implements IEspelhoCargaRepository {
 	private repository: Repository<EspelhoCarga>
@@ -34,14 +34,11 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 		return result
 	}
 
-	async createWithQueryRunner(
-		{ pedidoId, placa, motorista, lote, descricao }: IEspelhoCargaDTO,
-		transactionManager: EntityManager
-	): Promise<HttpResponse> {
+	async createWithQueryRunner({ pedidoId, placa, motorista, lote, descricao, interno }: IEspelhoCargaDTO, transactionManager: EntityManager): Promise<HttpResponse> {
 		try {
 			if (!transactionManager.queryRunner || !transactionManager.queryRunner.isTransactionActive) {
-				console.log("ERRO: Transação não está mais ativa ao tentar criar espelho_carga!")
-				return serverError(new Error("Transação não está mais ativa"))
+				console.log('ERRO: Transação não está mais ativa ao tentar criar espelho_carga!')
+				return serverError(new Error('Transação não está mais ativa'))
 			}
 
 			const espelhoCarga = transactionManager.create(EspelhoCarga, {
@@ -50,6 +47,7 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 				motorista,
 				lote,
 				descricao,
+				interno,
 			})
 
 			const result = await transactionManager
@@ -63,32 +61,26 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 
 			return result
 		} catch (error) {
-			console.log("Erro geral na criação do espelho_carga:", error)
+			console.log('Erro geral na criação do espelho_carga:', error)
 			return serverError(error)
 		}
 	}
 
 	// list
-	async list(
-		search: string,
-		page: number,
-		rowsPerPage: number,
-		order: string,
-		filter: string
-	): Promise<HttpResponse> {
+	async list(search: string, page: number, rowsPerPage: number, order: string, filter: string): Promise<HttpResponse> {
 		let columnName: string
-		let columnDirection: "ASC" | "DESC"
+		let columnDirection: 'ASC' | 'DESC'
 
-		if (typeof order === "undefined" || order === "") {
-			columnName = "placa"
-			columnDirection = "ASC"
+		if (typeof order === 'undefined' || order === '') {
+			columnName = 'placa'
+			columnDirection = 'ASC'
 		} else {
-			columnName = order.substring(0, 1) === "-" ? order.substring(1) : order
-			columnDirection = order.substring(0, 1) === "-" ? "DESC" : "ASC"
+			columnName = order.substring(0, 1) === '-' ? order.substring(1) : order
+			columnDirection = order.substring(0, 1) === '-' ? 'DESC' : 'ASC'
 		}
 
-		const referenceArray = ["placa", "motorista", "lote"]
-		const columnOrder = new Array<"ASC" | "DESC">(3).fill("ASC")
+		const referenceArray = ['placa', 'motorista', 'lote']
+		const columnOrder = new Array<'ASC' | 'DESC'>(3).fill('ASC')
 
 		const index = referenceArray.indexOf(columnName)
 
@@ -97,13 +89,14 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 		const offset = rowsPerPage * page
 
 		try {
-			let query = this.repository.createQueryBuilder("ec").select([
+			let query = this.repository.createQueryBuilder('ec').select([
 				'ec.id as "id"',
 				'ec.pedidoId as "pedidoId"',
 				'ec.placa as "placa"',
 				'ec.motorista as "motorista"',
 				'ec.lote as "lote"',
 				'ec.descricao as "descricao"',
+				'ec.interno as "interno"',
 				`(
 						CASE 
 							WHEN (
@@ -122,7 +115,26 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 							) THEN true
 							ELSE false
 						END
-					) as "confirmado"`,
+				) as "confirmado"`,
+				`(
+						CASE 
+							WHEN (
+								SELECT COUNT(*) 
+								FROM espelho_carga_items eci 
+								WHERE eci.espelho_carga_id = ec.id
+							) = 0 THEN false
+							WHEN (
+								SELECT COUNT(*) 
+								FROM espelho_carga_items eci 
+								WHERE eci.espelho_carga_id = ec.id AND eci.descarregado = true
+							) = (
+								SELECT COUNT(*) 
+								FROM espelho_carga_items eci 
+								WHERE eci.espelho_carga_id = ec.id
+							) THEN true
+							ELSE false
+						END
+				) as "descarregado"`,
 			])
 
 			if (filter) {
@@ -130,17 +142,121 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 			}
 
 			const espelhosCarga = await query
+				.andWhere('ec.interno IS NOT TRUE')
 				.andWhere(
 					new Brackets((query) => {
-						query.andWhere("CAST(ec.placa AS VARCHAR) ilike :search", { search: `%${search}%` })
-						query.orWhere("CAST(ec.motorista AS VARCHAR) ilike :search", { search: `%${search}%` })
-						query.orWhere("CAST(ec.lote AS VARCHAR) ilike :search", { search: `%${search}%` })
-						query.orWhere("CAST(ec.descricao AS VARCHAR) ilike :search", { search: `%${search}%` })
+						query.andWhere('CAST(ec.placa AS VARCHAR) ilike :search', { search: `%${search}%` })
+						query.orWhere('CAST(ec.motorista AS VARCHAR) ilike :search', { search: `%${search}%` })
+						query.orWhere('CAST(ec.lote AS VARCHAR) ilike :search', { search: `%${search}%` })
+						query.orWhere('CAST(ec.descricao AS VARCHAR) ilike :search', { search: `%${search}%` })
 					})
 				)
-				.addOrderBy("ec.placa", columnOrder[0])
-				.addOrderBy("ec.motorista", columnOrder[1])
-				.addOrderBy("ec.lote", columnOrder[2])
+				.addOrderBy('ec.createdAt', 'DESC')
+				// .addOrderBy("ec.placa", columnOrder[0])
+				// .addOrderBy("ec.motorista", columnOrder[1])
+				// .addOrderBy("ec.lote", columnOrder[2])
+				.offset(offset)
+				.limit(rowsPerPage)
+				.take(rowsPerPage)
+				.getRawMany()
+
+			console.log(espelhosCarga)
+
+			return ok(espelhosCarga)
+		} catch (err) {
+			return serverError(err)
+		}
+	}
+
+	async listAberto(search: string, page: number, rowsPerPage: number, order: string, filter: string): Promise<HttpResponse> {
+		let columnName: string
+		let columnDirection: 'ASC' | 'DESC'
+
+		if (typeof order === 'undefined' || order === '') {
+			columnName = 'placa'
+			columnDirection = 'ASC'
+		} else {
+			columnName = order.substring(0, 1) === '-' ? order.substring(1) : order
+			columnDirection = order.substring(0, 1) === '-' ? 'DESC' : 'ASC'
+		}
+
+		const referenceArray = ['placa', 'motorista', 'lote']
+		const columnOrder = new Array<'ASC' | 'DESC'>(3).fill('ASC')
+
+		const index = referenceArray.indexOf(columnName)
+
+		columnOrder[index] = columnDirection
+
+		const offset = rowsPerPage * page
+
+		try {
+			let query = this.repository
+				.createQueryBuilder('ec')
+				.select([
+					'ec.id as "id"',
+					'ec.pedidoId as "pedidoId"',
+					'ec.placa as "placa"',
+					'ec.motorista as "motorista"',
+					'ec.lote as "lote"',
+					'ec.descricao as "descricao"',
+					'ec.interno as "interno"',
+					`(
+						CASE 
+							WHEN (
+								SELECT COUNT(*) 
+								FROM espelho_carga_items eci 
+								WHERE eci.espelho_carga_id = ec.id
+							) = 0 THEN false
+							WHEN (
+								SELECT COUNT(*) 
+								FROM espelho_carga_items eci 
+								WHERE eci.espelho_carga_id = ec.id AND eci.confirmado = true
+							) = (
+								SELECT COUNT(*) 
+								FROM espelho_carga_items eci 
+								WHERE eci.espelho_carga_id = ec.id
+							) THEN true
+							ELSE false
+						END
+					) as "confirmado"`,
+				])
+				.where(
+					new Brackets((query) => {
+						query.where(
+							`NOT EXISTS (
+								SELECT 1
+								FROM espelho_carga_items eci
+								WHERE eci.espelho_carga_id = ec.id
+							)`
+						)
+						query.orWhere(
+							`EXISTS (
+								SELECT 1
+								FROM espelho_carga_items eci
+								WHERE eci.espelho_carga_id = ec.id
+									AND eci.confirmado = false
+							)`
+						)
+					})
+				)
+
+			if (filter) {
+				query = query.andWhere(filter)
+			}
+
+			const espelhosCarga = await query
+				.andWhere(
+					new Brackets((query) => {
+						query.andWhere('CAST(ec.placa AS VARCHAR) ilike :search', { search: `%${search}%` })
+						query.orWhere('CAST(ec.motorista AS VARCHAR) ilike :search', { search: `%${search}%` })
+						query.orWhere('CAST(ec.lote AS VARCHAR) ilike :search', { search: `%${search}%` })
+						query.orWhere('CAST(ec.descricao AS VARCHAR) ilike :search', { search: `%${search}%` })
+					})
+				)
+				.addOrderBy('ec.createdAt', 'DESC')
+				// .addOrderBy("ec.placa", columnOrder[0])
+				// .addOrderBy("ec.motorista", columnOrder[1])
+				// .addOrderBy("ec.lote", columnOrder[2])
 				.offset(offset)
 				.limit(rowsPerPage)
 				.take(rowsPerPage)
@@ -156,17 +272,17 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 	async select(filter: string): Promise<HttpResponse> {
 		try {
 			const espelhosCarga = await this.repository
-				.createQueryBuilder("ec")
-				.select(['ec.id as "value"', "CONCAT(ec.placa, ' - ', ec.motorista) as \"label\""])
-				.where("ec.placa ilike :filter", { filter: `${filter}%` })
-				.orWhere("ec.motorista ilike :filter", { filter: `${filter}%` })
-				.orWhere("ec.descricao ilike :filter", { filter: `${filter}%` })
-				.addOrderBy("ec.descricao")
+				.createQueryBuilder('ec')
+				.select(['ec.id as "value"', 'CONCAT(ec.placa, \' - \', ec.motorista) as "label"'])
+				.where('ec.placa ilike :filter', { filter: `${filter}%` })
+				.orWhere('ec.motorista ilike :filter', { filter: `${filter}%` })
+				.orWhere('ec.descricao ilike :filter', { filter: `${filter}%` })
+				.addOrderBy('ec.descricao')
 				.getRawMany()
 
 			return ok(espelhosCarga)
 		} catch (err) {
-			console.log("Error in select:", err)
+			console.log('Error in select:', err)
 			return serverError(err)
 		}
 	}
@@ -175,14 +291,14 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 	async idSelect(id: string): Promise<HttpResponse> {
 		try {
 			const espelhoCarga = await this.repository
-				.createQueryBuilder("ec")
-				.select(['ec.id as "value"', "CONCAT(ec.placa, ' - ', ec.motorista) as \"label\""])
-				.where("ec.id = :id", { id: `${id}` })
+				.createQueryBuilder('ec')
+				.select(['ec.id as "value"', 'CONCAT(ec.placa, \' - \', ec.motorista) as "label"'])
+				.where('ec.id = :id', { id: `${id}` })
 				.getRawOne()
 
 			return ok(espelhoCarga)
 		} catch (err) {
-			console.log("Error in idSelect:", err)
+			console.log('Error in idSelect:', err)
 			return serverError(err)
 		}
 	}
@@ -190,19 +306,20 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 	// count
 	async count(search: string, filter: string): Promise<HttpResponse> {
 		try {
-			let query = this.repository.createQueryBuilder("ec").select(['ec.id as "id"']).leftJoin("ec.pedidoId", "p")
+			let query = this.repository.createQueryBuilder('ec').select(['ec.id as "id"']).leftJoin('ec.pedidoId', 'p')
 
 			if (filter) {
 				query = query.where(filter)
 			}
 
 			const espelhosCarga = await query
+				.andWhere('ec.interno IS NOT TRUE')
 				.andWhere(
 					new Brackets((query) => {
-						query.andWhere("CAST(ec.placa AS VARCHAR) ilike :search", { search: `%${search}%` })
-						query.orWhere("CAST(ec.motorista AS VARCHAR) ilike :search", { search: `%${search}%` })
-						query.orWhere("CAST(ec.lote AS VARCHAR) ilike :search", { search: `%${search}%` })
-						query.orWhere("CAST(p.sequencial AS VARCHAR) ilike :search", { search: `%${search}%` })
+						query.andWhere('CAST(ec.placa AS VARCHAR) ilike :search', { search: `%${search}%` })
+						query.orWhere('CAST(ec.motorista AS VARCHAR) ilike :search', { search: `%${search}%` })
+						query.orWhere('CAST(ec.lote AS VARCHAR) ilike :search', { search: `%${search}%` })
+						query.orWhere('CAST(p.sequencial AS VARCHAR) ilike :search', { search: `%${search}%` })
 					})
 				)
 				.getRawMany()
@@ -217,7 +334,7 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 	async get(id: string): Promise<HttpResponse> {
 		try {
 			const espelhoCarga = await this.repository
-				.createQueryBuilder("ec")
+				.createQueryBuilder('ec')
 				.select([
 					'ec.id as "id"',
 					'ec.pedidoId as "pedidoId"',
@@ -228,12 +345,13 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 					'ec.descricao as "descricao"',
 					`TO_CHAR(ec.createdAt, 'DD/MM/YYYY') as "createdAt"`,
 					`TO_CHAR(ec.updatedAt, 'DD/MM/YYYY') as "updatedAt"`,
+					'ec.interno as "interno"',
 				])
-				.leftJoin("ec.pedidoId", "p")
-				.where("ec.id = :id", { id })
+				.leftJoin('ec.pedidoId', 'p')
+				.where('ec.id = :id', { id })
 				.getRawOne()
 
-			if (typeof espelhoCarga === "undefined") {
+			if (typeof espelhoCarga === 'undefined') {
 				return noContent()
 			}
 
@@ -248,7 +366,8 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 						CONCAT(p3.nome, ' - ', p3.descricao) as "produtoNome",
 						eci.quantidade as "quantidade", 
 						pi.id as "pacoteItemId",
-						eci.confirmado as "confirmado"
+						eci.confirmado as "confirmado",
+						eci.descarregado as "descarregado"
 					FROM espelho_carga_items eci 
 					LEFT JOIN pacotes_items pi ON pi.id = eci.pacote_item_id 
 					LEFT JOIN pacotes p ON p.id = pi.pacote_id 
@@ -271,6 +390,7 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 						id: pacoteId,
 						descricao: item.pacoteDescricao,
 						confirmado: item.confirmado || false,
+						descarregado: item.descarregado || false,
 						items: [],
 					})
 				}
@@ -280,8 +400,9 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 					id: item.pacoteItemId,
 					produto: item.produtoId,
 					produto_nome: item.produtoNome,
-					quantidade: item.quantidade?.toString() || "0",
+					quantidade: item.quantidade?.toString() || '0',
 					confirmado: item.confirmado || false,
+					descarregado: item.descarregado || false,
 				})
 			})
 
@@ -291,16 +412,17 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 			const result = {
 				pedidoId: espelhoCarga.pedidoId || null,
 				pacoteId: null,
-				placa: espelhoCarga.placa || "",
-				motorista: espelhoCarga.motorista || "",
-				lote: espelhoCarga.lote || "",
-				descricao: espelhoCarga.descricao || "",
+				placa: espelhoCarga.placa || '',
+				motorista: espelhoCarga.motorista || '',
+				lote: espelhoCarga.lote || '',
+				descricao: espelhoCarga.descricao || '',
+				interno: espelhoCarga.interno || false,
 				espelhoCargaItems: espelhoCargaItems,
 			}
 
 			return ok(result)
 		} catch (err) {
-			console.log("Error in get:", err)
+			console.log('Error in get:', err)
 			return serverError(err)
 		}
 	}
@@ -330,10 +452,7 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 		}
 	}
 
-	async updateWithQueryRunner(
-		{ id, pedidoId, placa, motorista, lote }: IEspelhoCargaDTO,
-		transactionManager: EntityManager
-	): Promise<HttpResponse> {
+	async updateWithQueryRunner({ id, pedidoId, placa, motorista, lote, interno }: IEspelhoCargaDTO, transactionManager: EntityManager): Promise<HttpResponse> {
 		const espelhoCarga = await transactionManager.findOne(EspelhoCarga, id)
 
 		if (!espelhoCarga) {
@@ -346,6 +465,7 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 			placa,
 			motorista,
 			lote,
+			interno,
 		})
 
 		try {
@@ -364,8 +484,8 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 
 			return noContent()
 		} catch (err) {
-			if (err.message.slice(0, 10) === "null value") {
-				throw new AppError("not null constraint", 404)
+			if (err.message.slice(0, 10) === 'null value') {
+				throw new AppError('not null constraint', 404)
 			}
 
 			return serverError(err)
@@ -389,10 +509,134 @@ class EspelhoCargaRepository implements IEspelhoCargaRepository {
 
 			return noContent()
 		} catch (err) {
-			if (err.message.slice(0, 10) === "null value") {
-				throw new AppError("not null constraint", 404)
+			if (err.message.slice(0, 10) === 'null value') {
+				throw new AppError('not null constraint', 404)
 			}
 
+			return serverError(err)
+		}
+	}
+
+	async listInterno(search: string, page: number, rowsPerPage: number, order: string, filter: string): Promise<HttpResponse> {
+		let columnName: string
+		let columnDirection: 'ASC' | 'DESC'
+
+		if (typeof order === 'undefined' || order === '') {
+			columnName = 'placa'
+			columnDirection = 'ASC'
+		} else {
+			columnName = order.substring(0, 1) === '-' ? order.substring(1) : order
+			columnDirection = order.substring(0, 1) === '-' ? 'DESC' : 'ASC'
+		}
+
+		const referenceArray = ['placa', 'motorista', 'lote']
+		const columnOrder = new Array<'ASC' | 'DESC'>(3).fill('ASC')
+
+		const index = referenceArray.indexOf(columnName)
+
+		columnOrder[index] = columnDirection
+
+		const offset = rowsPerPage * page
+
+		try {
+			let query = this.repository.createQueryBuilder('ec').select([
+				'ec.id as "id"',
+				'ec.pedidoId as "pedidoId"',
+				'ec.placa as "placa"',
+				'ec.motorista as "motorista"',
+				'ec.lote as "lote"',
+				'ec.descricao as "descricao"',
+				`(
+						CASE 
+							WHEN (
+								SELECT COUNT(*) 
+								FROM espelho_carga_items eci 
+								WHERE eci.espelho_carga_id = ec.id
+							) = 0 THEN false
+							WHEN (
+								SELECT COUNT(*) 
+								FROM espelho_carga_items eci 
+								WHERE eci.espelho_carga_id = ec.id AND eci.confirmado = true
+							) = (
+								SELECT COUNT(*) 
+								FROM espelho_carga_items eci 
+								WHERE eci.espelho_carga_id = ec.id
+							) THEN true
+							ELSE false
+						END
+					) as "confirmado"`,
+				`(
+							CASE 
+								WHEN (
+									SELECT COUNT(*) 
+									FROM espelho_carga_items eci 
+									WHERE eci.espelho_carga_id = ec.id
+								) = 0 THEN false
+								WHEN (
+									SELECT COUNT(*) 
+									FROM espelho_carga_items eci 
+									WHERE eci.espelho_carga_id = ec.id AND eci.descarregado = true
+								) = (
+									SELECT COUNT(*) 
+									FROM espelho_carga_items eci 
+									WHERE eci.espelho_carga_id = ec.id
+								) THEN true
+								ELSE false
+							END
+					) as "descarregado"`,
+			])
+
+			if (filter) {
+				query = query.where(filter)
+			}
+
+			const espelhosCarga = await query
+				.andWhere('ec.interno IS TRUE')
+				.andWhere(
+					new Brackets((query) => {
+						query.andWhere('CAST(ec.placa AS VARCHAR) ilike :search', { search: `%${search}%` })
+						query.orWhere('CAST(ec.motorista AS VARCHAR) ilike :search', { search: `%${search}%` })
+						query.orWhere('CAST(ec.lote AS VARCHAR) ilike :search', { search: `%${search}%` })
+						query.orWhere('CAST(ec.descricao AS VARCHAR) ilike :search', { search: `%${search}%` })
+					})
+				)
+				.addOrderBy('ec.createdAt', 'DESC')
+				// .addOrderBy("ec.placa", columnOrder[0])
+				// .addOrderBy("ec.motorista", columnOrder[1])
+				// .addOrderBy("ec.lote", columnOrder[2])
+				.offset(offset)
+				.limit(rowsPerPage)
+				.take(rowsPerPage)
+				.getRawMany()
+
+			return ok(espelhosCarga)
+		} catch (err) {
+			return serverError(err)
+		}
+	}
+
+	// count
+	async countInterno(search: string, filter: string): Promise<HttpResponse> {
+		try {
+			let query = this.repository.createQueryBuilder('ec').select(['ec.id as "id"'])
+
+			if (filter) {
+				query = query.where(filter)
+			}
+
+			const espelhosCarga = await query
+				.andWhere('ec.interno IS TRUE')
+				.andWhere(
+					new Brackets((query) => {
+						query.andWhere('CAST(ec.placa AS VARCHAR) ilike :search', { search: `%${search}%` })
+						query.orWhere('CAST(ec.motorista AS VARCHAR) ilike :search', { search: `%${search}%` })
+						query.orWhere('CAST(ec.lote AS VARCHAR) ilike :search', { search: `%${search}%` })
+					})
+				)
+				.getRawMany()
+
+			return ok({ count: espelhosCarga.length })
+		} catch (err) {
 			return serverError(err)
 		}
 	}

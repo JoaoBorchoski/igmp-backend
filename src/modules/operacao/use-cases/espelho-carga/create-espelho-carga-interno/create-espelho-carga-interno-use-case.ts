@@ -1,9 +1,9 @@
-import { inject, injectable } from "tsyringe"
-import { IEspelhoCargaRepository } from "@modules/operacao/repositories/i-espelho-carga-repository"
-import { IEspelhoCargaItemsRepository } from "@modules/operacao/repositories/i-espelho-carga-items-repository"
-import { AppError } from "@shared/errors/app-error"
-import { getConnection } from "typeorm"
-import { HttpResponse, serverError } from "@shared/helpers"
+import { inject, injectable } from 'tsyringe'
+import { IEspelhoCargaRepository } from '@modules/operacao/repositories/i-espelho-carga-repository'
+import { IEspelhoCargaItemsRepository } from '@modules/operacao/repositories/i-espelho-carga-items-repository'
+import { AppError } from '@shared/errors/app-error'
+import { getConnection } from 'typeorm'
+import { HttpResponse, serverError } from '@shared/helpers'
 
 interface IRequest {
 	pedidoId: string
@@ -15,11 +15,11 @@ interface IRequest {
 }
 
 @injectable()
-class CreateEspelhoCargaUseCase {
+class CreateEspelhoCargaInternoUseCase {
 	constructor(
-		@inject("EspelhoCargaRepository")
+		@inject('EspelhoCargaRepository')
 		private espelhoCargaRepository: IEspelhoCargaRepository,
-		@inject("EspelhoCargaItemsRepository")
+		@inject('EspelhoCargaItemsRepository')
 		private espelhoCargaItemsRepository: IEspelhoCargaItemsRepository
 	) {}
 
@@ -36,6 +36,7 @@ class CreateEspelhoCargaUseCase {
 						motorista,
 						lote,
 						descricao,
+						interno: true,
 					},
 					queryRunner.manager
 				)
@@ -49,7 +50,7 @@ class CreateEspelhoCargaUseCase {
 			const items = espelhoCargaItems.reduce((acc, item) => [...acc, ...item.items], [])
 
 			for await (const item of items) {
-				const itemResult = await this.espelhoCargaItemsRepository.createWithQueryRunner(
+				await this.espelhoCargaItemsRepository.createWithQueryRunner(
 					{
 						espelhoCargaId: result.data.id,
 						pacoteItemId: item.id,
@@ -63,7 +64,7 @@ class CreateEspelhoCargaUseCase {
 			return result
 		} catch (error) {
 			await queryRunner.rollbackTransaction()
-			console.log("Error creating espelho_carga:", error)
+			console.log('Error creating espelho_carga:', error)
 			return serverError(error)
 		} finally {
 			await queryRunner.release()
@@ -71,4 +72,4 @@ class CreateEspelhoCargaUseCase {
 	}
 }
 
-export { CreateEspelhoCargaUseCase }
+export { CreateEspelhoCargaInternoUseCase }

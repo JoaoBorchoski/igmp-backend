@@ -7,6 +7,7 @@ interface IEspelhoCargaDTO {
 	descricao?: string
 	createdAt?: Date
 	updatedAt?: Date
+	interno?: boolean
 }
 
 export { IEspelhoCargaDTO }

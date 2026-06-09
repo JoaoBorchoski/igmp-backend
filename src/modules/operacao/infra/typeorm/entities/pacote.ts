@@ -1,34 +1,37 @@
-import { PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, Entity, JoinColumn, ManyToOne } from "typeorm"
-import { v4 as uuidV4 } from "uuid"
+import { PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, Entity, JoinColumn, ManyToOne } from 'typeorm'
+import { v4 as uuidV4 } from 'uuid'
 
-import { Pedido } from "@modules/operacao/infra/typeorm/entities/pedido"
+import { Pedido } from '@modules/operacao/infra/typeorm/entities/pedido'
 
-@Entity("pacotes")
+@Entity('pacotes')
 class Pacote {
-    @PrimaryColumn()
-    id?: string
+	@PrimaryColumn()
+	id?: string
 
-    @ManyToOne(() => Pedido, { nullable: true, eager: true })
-    @JoinColumn({ name: "pedido_id", referencedColumnName: "id" })
-    pedidoId?: string
+	@ManyToOne(() => Pedido, { nullable: true, eager: true })
+	@JoinColumn({ name: 'pedido_id', referencedColumnName: 'id' })
+	pedidoId?: string
 
-    @Column({ name: "descricao", nullable: true })
-    descricao?: string
+	@Column({ name: 'descricao', nullable: true })
+	descricao?: string
 
-    @CreateDateColumn({ name: "created_at", nullable: true })
-    createdAt?: Date
+	@CreateDateColumn({ name: 'created_at', nullable: true })
+	createdAt?: Date
 
-    @UpdateDateColumn({ name: "updated_at", nullable: true })
-    updatedAt?: Date
+	@UpdateDateColumn({ name: 'updated_at', nullable: true })
+	updatedAt?: Date
 
-    @Column({ name: "sequencial", nullable: true })
-    sequencial?: Number
+	@Column({ name: 'sequencial', nullable: true })
+	sequencial?: Number
 
-    constructor() {
-        if (!this.id) {
-            this.id = uuidV4()
-        }
-    }
+	@Column({ name: 'cor', nullable: true })
+	cor?: string
+
+	constructor() {
+		if (!this.id) {
+			this.id = uuidV4()
+		}
+	}
 }
 
 export { Pacote }

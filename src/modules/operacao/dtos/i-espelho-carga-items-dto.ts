@@ -4,6 +4,7 @@ interface IEspelhoCargaItemsDTO {
 	pacoteItemId?: string
 	quantidade?: number
 	confirmado?: boolean
+	descarregado?: boolean
 	createdAt?: Date
 	updatedAt?: Date
 }

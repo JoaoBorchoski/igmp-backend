@@ -1,9 +1,9 @@
-import { Brackets, EntityManager, getRepository, Repository } from "typeorm"
-import { IPacoteItemDTO } from "@modules/operacao/dtos/i-pacote-item-dto"
-import { IPacoteItemRepository } from "@modules/operacao/repositories/i-pacote-item-repository"
-import { PacoteItem } from "@modules/operacao/infra/typeorm/entities/pacote-item"
-import { noContent, serverError, ok, notFound, HttpResponse } from "@shared/helpers"
-import { AppError } from "@shared/errors/app-error"
+import { Brackets, EntityManager, getRepository, Repository } from 'typeorm'
+import { IPacoteItemDTO } from '@modules/operacao/dtos/i-pacote-item-dto'
+import { IPacoteItemRepository } from '@modules/operacao/repositories/i-pacote-item-repository'
+import { PacoteItem } from '@modules/operacao/infra/typeorm/entities/pacote-item'
+import { noContent, serverError, ok, notFound, HttpResponse } from '@shared/helpers'
+import { AppError } from '@shared/errors/app-error'
 
 class PacoteItemRepository implements IPacoteItemRepository {
 	private repository: Repository<PacoteItem>
@@ -33,18 +33,8 @@ class PacoteItemRepository implements IPacoteItemRepository {
 	}
 
 	async createWithQueryRunner(
-		{
-			pacoteId,
-			produto,
-			quantidade,
-			quantidadeLateral,
-			quantidadeCabeceira,
-			quantidadeLateralCabeceira,
-			tipoItem,
-			confirmado,
-			descricao,
-		}: IPacoteItemDTO,
-		transactionManager: EntityManager
+		{ pacoteId, produto, quantidade, quantidadeLateral, quantidadeCabeceira, quantidadeLateralCabeceira, tipoItem, confirmado, descricao }: IPacoteItemDTO,
+		transactionManager: EntityManager,
 	): Promise<HttpResponse> {
 		const pacoteItem = transactionManager.create(PacoteItem, {
 			pacoteId,
@@ -71,26 +61,20 @@ class PacoteItemRepository implements IPacoteItemRepository {
 	}
 
 	// list
-	async list(
-		search: string,
-		page: number,
-		rowsPerPage: number,
-		order: string,
-		filter: string
-	): Promise<HttpResponse> {
+	async list(search: string, page: number, rowsPerPage: number, order: string, filter: string): Promise<HttpResponse> {
 		let columnName: string
-		let columnDirection: "ASC" | "DESC"
+		let columnDirection: 'ASC' | 'DESC'
 
-		if (typeof order === "undefined" || order === "") {
-			columnName = "nome"
-			columnDirection = "ASC"
+		if (typeof order === 'undefined' || order === '') {
+			columnName = 'nome'
+			columnDirection = 'ASC'
 		} else {
-			columnName = order.substring(0, 1) === "-" ? order.substring(1) : order
-			columnDirection = order.substring(0, 1) === "-" ? "DESC" : "ASC"
+			columnName = order.substring(0, 1) === '-' ? order.substring(1) : order
+			columnDirection = order.substring(0, 1) === '-' ? 'DESC' : 'ASC'
 		}
 
-		const referenceArray = ["pacoteId", "quantidade"]
-		const columnOrder = new Array<"ASC" | "DESC">(2).fill("ASC")
+		const referenceArray = ['pacoteId', 'quantidade']
+		const columnOrder = new Array<'ASC' | 'DESC'>(2).fill('ASC')
 
 		const index = referenceArray.indexOf(columnName)
 
@@ -100,14 +84,9 @@ class PacoteItemRepository implements IPacoteItemRepository {
 
 		try {
 			let query = this.repository
-				.createQueryBuilder("pac")
-				.select([
-					'pac.id as "id"',
-					'a.id as "pacoteId"',
-					'a.id as "pacoteId"',
-					'pac.quantidade as "quantidade"',
-				])
-				.leftJoin("pac.pacoteId", "a")
+				.createQueryBuilder('pac')
+				.select(['pac.id as "id"', 'a.id as "pacoteId"', 'a.id as "pacoteId"', 'pac.quantidade as "quantidade"'])
+				.leftJoin('pac.pacoteId', 'a')
 
 			if (filter) {
 				query = query.where(filter)
@@ -116,11 +95,11 @@ class PacoteItemRepository implements IPacoteItemRepository {
 			const pacotesItems = await query
 				.andWhere(
 					new Brackets((query) => {
-						query.andWhere("CAST(a.id AS VARCHAR) ilike :search", { search: `%${search}%` })
-					})
+						query.andWhere('CAST(a.id AS VARCHAR) ilike :search', { search: `%${search}%` })
+					}),
 				)
-				.addOrderBy("a.id", columnOrder[0])
-				.addOrderBy("pac.quantidade", columnOrder[1])
+				.addOrderBy('a.id', columnOrder[0])
+				.addOrderBy('pac.quantidade', columnOrder[1])
 				.offset(offset)
 				.limit(rowsPerPage)
 				.take(rowsPerPage)
@@ -136,10 +115,10 @@ class PacoteItemRepository implements IPacoteItemRepository {
 	async select(filter: string): Promise<HttpResponse> {
 		try {
 			const pacotesItems = await this.repository
-				.createQueryBuilder("pac")
+				.createQueryBuilder('pac')
 				.select(['pac.id as "value"', 'pac.pacoteId as "label"'])
-				.where("pac.pacoteId ilike :filter", { filter: `${filter}%` })
-				.addOrderBy("pac.pacoteId")
+				.where('pac.pacoteId ilike :filter', { filter: `${filter}%` })
+				.addOrderBy('pac.pacoteId')
 				.getRawMany()
 
 			return ok(pacotesItems)
@@ -152,9 +131,9 @@ class PacoteItemRepository implements IPacoteItemRepository {
 	async idSelect(id: string): Promise<HttpResponse> {
 		try {
 			const pacoteItem = await this.repository
-				.createQueryBuilder("pac")
+				.createQueryBuilder('pac')
 				.select(['pac.id as "value"', 'pac.pacoteId as "label"'])
-				.where("pac.id = :id", { id: `${id}` })
+				.where('pac.id = :id', { id: `${id}` })
 				.getRawOne()
 
 			return ok(pacoteItem)
@@ -166,10 +145,7 @@ class PacoteItemRepository implements IPacoteItemRepository {
 	// count
 	async count(search: string, filter: string): Promise<HttpResponse> {
 		try {
-			let query = this.repository
-				.createQueryBuilder("pac")
-				.select(['pac.id as "id"'])
-				.leftJoin("pac.pacoteId", "a")
+			let query = this.repository.createQueryBuilder('pac').select(['pac.id as "id"']).leftJoin('pac.pacoteId', 'a')
 
 			if (filter) {
 				query = query.where(filter)
@@ -178,8 +154,8 @@ class PacoteItemRepository implements IPacoteItemRepository {
 			const pacotesItems = await query
 				.andWhere(
 					new Brackets((query) => {
-						query.andWhere("CAST(a.id AS VARCHAR) ilike :search", { search: `%${search}%` })
-					})
+						query.andWhere('CAST(a.id AS VARCHAR) ilike :search', { search: `%${search}%` })
+					}),
 				)
 				.getRawMany()
 
@@ -193,19 +169,13 @@ class PacoteItemRepository implements IPacoteItemRepository {
 	async get(id: string): Promise<HttpResponse> {
 		try {
 			const pacoteItem = await this.repository
-				.createQueryBuilder("pac")
-				.select([
-					'pac.id as "id"',
-					'pac.pacoteId as "pacoteId"',
-					'a.id as "pacoteId"',
-					'pac.produto as "produto"',
-					'pac.quantidade as "quantidade"',
-				])
-				.leftJoin("pac.pacoteId", "a")
-				.where("pac.id = :id", { id })
+				.createQueryBuilder('pac')
+				.select(['pac.id as "id"', 'pac.pacoteId as "pacoteId"', 'a.id as "pacoteId"', 'pac.produto as "produto"', 'pac.quantidade as "quantidade"'])
+				.leftJoin('pac.pacoteId', 'a')
+				.where('pac.id = :id', { id })
 				.getRawOne()
 
-			if (typeof pacoteItem === "undefined") {
+			if (typeof pacoteItem === 'undefined') {
 				return noContent()
 			}
 
@@ -218,14 +188,14 @@ class PacoteItemRepository implements IPacoteItemRepository {
 	async getQuantidadeByPedidoIdAndProdutoId(pedidoId: string, produtoId: string): Promise<HttpResponse> {
 		try {
 			const pacoteItem = await this.repository
-				.createQueryBuilder("pac")
+				.createQueryBuilder('pac')
 				.select(['SUM(pac.quantidade) :: float as "quantidadeUsada"'])
-				.leftJoin("pac.pacoteId", "a")
-				.where("a.pedidoId = :pedidoId", { pedidoId })
-				.andWhere("pac.produto = :produtoId", { produtoId })
+				.leftJoin('pac.pacoteId', 'a')
+				.where('a.pedidoId = :pedidoId', { pedidoId })
+				.andWhere('pac.produto = :produtoId', { produtoId })
 				.getRawOne()
 
-			if (typeof pacoteItem === "undefined") {
+			if (typeof pacoteItem === 'undefined') {
 				return noContent()
 			}
 
@@ -235,25 +205,35 @@ class PacoteItemRepository implements IPacoteItemRepository {
 		}
 	}
 
-	async getQuantidadeByPedidoIdAndProdutoIdWithQueryRunner(
-		pedidoId: string,
-		produtoId: string,
-		transactionManager: EntityManager
-	): Promise<HttpResponse> {
+	async getQuantidadeByPedidoIdAndProdutoIdWithQueryRunner(pedidoId: string, produtoId: string, transactionManager: EntityManager): Promise<HttpResponse> {
 		try {
 			const pacoteItem = await transactionManager
-				.createQueryBuilder(PacoteItem, "pac")
+				.createQueryBuilder(PacoteItem, 'pac')
 				.select(['SUM(pac.quantidade) :: float as "quantidadeUsada"'])
-				.leftJoin("pac.pacoteId", "a")
-				.where("a.pedidoId = :pedidoId", { pedidoId })
-				.andWhere("pac.produto = :produtoId", { produtoId })
+				.leftJoin('pac.pacoteId', 'a')
+				.where('a.pedidoId = :pedidoId', { pedidoId })
+				.andWhere('pac.produto = :produtoId', { produtoId })
 				.getRawOne()
 
-			if (typeof pacoteItem === "undefined") {
+			if (typeof pacoteItem === 'undefined') {
 				return noContent()
 			}
 
 			return ok(pacoteItem)
+		} catch (err) {
+			return serverError(err)
+		}
+	}
+
+	async getByPacoteId(pacoteId: string): Promise<HttpResponse> {
+		try {
+			const pacoteItems = await this.repository.find({ where: { pacoteId } })
+
+			if (typeof pacoteItems === 'undefined') {
+				return noContent()
+			}
+
+			return ok(pacoteItems)
 		} catch (err) {
 			return serverError(err)
 		}
@@ -283,6 +263,38 @@ class PacoteItemRepository implements IPacoteItemRepository {
 		}
 	}
 
+	async updateWithQueryRunner(
+		{ id, pacoteId, produto, quantidade, quantidadeLateral, quantidadeCabeceira, quantidadeLateralCabeceira, tipoItem, confirmado, descricao }: IPacoteItemDTO,
+		transactionManager: EntityManager,
+	): Promise<HttpResponse> {
+		const pacoteItem = await transactionManager.findOne(PacoteItem, id)
+
+		if (!pacoteItem) {
+			return notFound()
+		}
+
+		const newpacoteItem = transactionManager.create(PacoteItem, {
+			id,
+			pacoteId,
+			produto,
+			quantidade,
+			quantidadeLateral,
+			quantidadeCabeceira,
+			quantidadeLateralCabeceira,
+			tipoItem,
+			confirmado,
+			descricao,
+		})
+
+		try {
+			await transactionManager.save(PacoteItem, newpacoteItem)
+
+			return ok(newpacoteItem)
+		} catch (err) {
+			return serverError(err)
+		}
+	}
+
 	// delete
 	async delete(id: string): Promise<HttpResponse> {
 		try {
@@ -290,10 +302,19 @@ class PacoteItemRepository implements IPacoteItemRepository {
 
 			return noContent()
 		} catch (err) {
-			if (err.message.slice(0, 10) === "null value") {
-				throw new AppError("not null constraint", 404)
+			if (err.message.slice(0, 10) === 'null value') {
+				throw new AppError('not null constraint', 404)
 			}
 
+			return serverError(err)
+		}
+	}
+
+	async deleteWithQueryRunner(id: string, transactionManager: EntityManager): Promise<HttpResponse> {
+		try {
+			await transactionManager.delete(PacoteItem, id)
+			return noContent()
+		} catch (err) {
 			return serverError(err)
 		}
 	}
@@ -305,8 +326,8 @@ class PacoteItemRepository implements IPacoteItemRepository {
 
 			return noContent()
 		} catch (err) {
-			if (err.message.slice(0, 10) === "null value") {
-				throw new AppError("not null constraint", 404)
+			if (err.message.slice(0, 10) === 'null value') {
+				throw new AppError('not null constraint', 404)
 			}
 
 			return serverError(err)

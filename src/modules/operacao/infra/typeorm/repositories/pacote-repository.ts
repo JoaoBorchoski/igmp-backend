@@ -1,9 +1,9 @@
-import { Brackets, EntityManager, getRepository, Repository } from "typeorm"
-import { IPacoteDTO } from "@modules/operacao/dtos/i-pacote-dto"
-import { IPacoteRepository } from "@modules/operacao/repositories/i-pacote-repository"
-import { Pacote } from "@modules/operacao/infra/typeorm/entities/pacote"
-import { noContent, serverError, ok, notFound, HttpResponse, conflictError } from "@shared/helpers"
-import { AppError } from "@shared/errors/app-error"
+import { Brackets, EntityManager, getRepository, Repository } from 'typeorm'
+import { IPacoteDTO } from '@modules/operacao/dtos/i-pacote-dto'
+import { IPacoteRepository } from '@modules/operacao/repositories/i-pacote-repository'
+import { Pacote } from '@modules/operacao/infra/typeorm/entities/pacote'
+import { noContent, serverError, ok, notFound, HttpResponse, conflictError } from '@shared/helpers'
+import { AppError } from '@shared/errors/app-error'
 
 class PacoteRepository implements IPacoteRepository {
 	private repository: Repository<Pacote>
@@ -13,10 +13,11 @@ class PacoteRepository implements IPacoteRepository {
 	}
 
 	// create
-	async create({ pedidoId, descricao }: IPacoteDTO): Promise<HttpResponse> {
+	async create({ pedidoId, descricao, cor }: IPacoteDTO): Promise<HttpResponse> {
 		const pacote = this.repository.create({
 			pedidoId,
 			descricao,
+			cor,
 		})
 
 		const result = await this.repository
@@ -31,21 +32,16 @@ class PacoteRepository implements IPacoteRepository {
 		return result
 	}
 
-	async createWithQueryRunner(
-		{ pedidoId, descricao }: IPacoteDTO,
-		transactionManager: EntityManager
-	): Promise<HttpResponse> {
-		const seqAtual = await this.repository
-			.createQueryBuilder("ped")
-			.select("MAX(ped.sequencial) :: INTEGER", "maxSequencial")
-			.getRawOne()
+	async createWithQueryRunner({ pedidoId, descricao, cor }: IPacoteDTO, transactionManager: EntityManager, seq?: number): Promise<HttpResponse> {
+		const seqAtual = await this.repository.createQueryBuilder('ped').select('MAX(ped.sequencial) :: INTEGER', 'maxSequencial').getRawOne()
 
-		const sequencial = seqAtual.maxSequencial ? seqAtual.maxSequencial + 1 : 1
+		const sequencial = seq ? seq : seqAtual.maxSequencial ? seqAtual.maxSequencial + 1 : 1
 
 		const pacote = transactionManager.create(Pacote, {
 			pedidoId,
 			descricao,
 			sequencial,
+			cor,
 		})
 
 		const result = await transactionManager
@@ -61,26 +57,20 @@ class PacoteRepository implements IPacoteRepository {
 	}
 
 	// list
-	async list(
-		search: string,
-		page: number,
-		rowsPerPage: number,
-		order: string,
-		filter: string
-	): Promise<HttpResponse> {
+	async list(search: string, page: number, rowsPerPage: number, order: string, filter: string): Promise<HttpResponse> {
 		let columnName: string
-		let columnDirection: "ASC" | "DESC"
+		let columnDirection: 'ASC' | 'DESC'
 
-		if (typeof order === "undefined" || order === "") {
-			columnName = "nome"
-			columnDirection = "ASC"
+		if (typeof order === 'undefined' || order === '') {
+			columnName = 'nome'
+			columnDirection = 'ASC'
 		} else {
-			columnName = order.substring(0, 1) === "-" ? order.substring(1) : order
-			columnDirection = order.substring(0, 1) === "-" ? "DESC" : "ASC"
+			columnName = order.substring(0, 1) === '-' ? order.substring(1) : order
+			columnDirection = order.substring(0, 1) === '-' ? 'DESC' : 'ASC'
 		}
 
-		const referenceArray = ["pedidoSequencial", "descricao"]
-		const columnOrder = new Array<"ASC" | "DESC">(2).fill("ASC")
+		const referenceArray = ['pedidoSequencial', 'descricao']
+		const columnOrder = new Array<'ASC' | 'DESC'>(2).fill('ASC')
 
 		const index = referenceArray.indexOf(columnName)
 
@@ -90,15 +80,9 @@ class PacoteRepository implements IPacoteRepository {
 
 		try {
 			let query = this.repository
-				.createQueryBuilder("pac")
-				.select([
-					'pac.id as "id"',
-					'a.id as "pedidoId"',
-					'a.sequencial as "pedidoSequencial"',
-					'pac.descricao as "descricao"',
-					'pac.sequencial as "sequencial"',
-				])
-				.leftJoin("pac.pedidoId", "a")
+				.createQueryBuilder('pac')
+				.select(['pac.id as "id"', 'a.id as "pedidoId"', 'a.sequencial as "pedidoSequencial"', 'pac.descricao as "descricao"', 'pac.sequencial as "sequencial"'])
+				.leftJoin('pac.pedidoId', 'a')
 
 			if (filter) {
 				query = query.where(filter)
@@ -107,13 +91,13 @@ class PacoteRepository implements IPacoteRepository {
 			const pacotes = await query
 				.andWhere(
 					new Brackets((query) => {
-						query.andWhere("CAST(a.sequencial AS VARCHAR) ilike :search", { search: `%${search}%` })
-						query.orWhere("CAST(pac.sequencial AS VARCHAR) ilike :search", { search: `%${search}%` })
-						query.orWhere("CAST(pac.descricao AS VARCHAR) ilike :search", { search: `%${search}%` })
+						query.andWhere('CAST(a.sequencial AS VARCHAR) ilike :search', { search: `%${search}%` })
+						query.orWhere('CAST(pac.sequencial AS VARCHAR) ilike :search', { search: `%${search}%` })
+						query.orWhere('CAST(pac.descricao AS VARCHAR) ilike :search', { search: `%${search}%` })
 					})
 				)
-				.addOrderBy("a.sequencial", columnOrder[0])
-				.addOrderBy("pac.descricao", columnOrder[1])
+				.addOrderBy('pac.sequencial', 'DESC')
+				.addOrderBy('a.sequencial', 'DESC')
 				.offset(offset)
 				.limit(rowsPerPage)
 				.take(rowsPerPage)
@@ -129,10 +113,10 @@ class PacoteRepository implements IPacoteRepository {
 	async select(filter: string): Promise<HttpResponse> {
 		try {
 			const pacotes = await this.repository
-				.createQueryBuilder("pac")
+				.createQueryBuilder('pac')
 				.select(['pac.id as "value"', 'pac.id as "label"'])
-				.where("pac.id ilike :filter", { filter: `${filter}%` })
-				.addOrderBy("pac.id")
+				.where('pac.id ilike :filter', { filter: `${filter}%` })
+				.addOrderBy('pac.id')
 				.getRawMany()
 
 			return ok(pacotes)
@@ -145,9 +129,9 @@ class PacoteRepository implements IPacoteRepository {
 	async idSelect(id: string): Promise<HttpResponse> {
 		try {
 			const pacote = await this.repository
-				.createQueryBuilder("pac")
+				.createQueryBuilder('pac')
 				.select(['pac.id as "value"', 'pac.id as "label"'])
-				.where("pac.id = :id", { id: `${id}` })
+				.where('pac.id = :id', { id: `${id}` })
 				.getRawOne()
 
 			return ok(pacote)
@@ -159,10 +143,7 @@ class PacoteRepository implements IPacoteRepository {
 	// count
 	async count(search: string, filter: string): Promise<HttpResponse> {
 		try {
-			let query = this.repository
-				.createQueryBuilder("pac")
-				.select(['pac.id as "id"'])
-				.leftJoin("pac.pedidoId", "a")
+			let query = this.repository.createQueryBuilder('pac').select(['pac.id as "id"']).leftJoin('pac.pedidoId', 'a')
 
 			if (filter) {
 				query = query.where(filter)
@@ -171,8 +152,8 @@ class PacoteRepository implements IPacoteRepository {
 			const pacotes = await query
 				.andWhere(
 					new Brackets((query) => {
-						query.andWhere("CAST(a.sequencial AS VARCHAR) ilike :search", { search: `%${search}%` })
-						query.orWhere("CAST(pac.descricao AS VARCHAR) ilike :search", { search: `%${search}%` })
+						query.andWhere('CAST(a.sequencial AS VARCHAR) ilike :search', { search: `%${search}%` })
+						query.orWhere('CAST(pac.descricao AS VARCHAR) ilike :search', { search: `%${search}%` })
 					})
 				)
 				.getRawMany()
@@ -187,20 +168,21 @@ class PacoteRepository implements IPacoteRepository {
 	async get(id: string): Promise<HttpResponse> {
 		try {
 			const pacote = await this.repository
-				.createQueryBuilder("pac")
+				.createQueryBuilder('pac')
 				.select([
 					'pac.id as "id"',
 					'pac.pedidoId as "pedidoId"',
 					'a.sequencial as "pedidoSequencial"',
 					'pac.descricao as "descricao"',
-					"CONCAT(a.sequencial, ' - ', c.nome) as \"pedidoLabel\"",
+					'CONCAT(a.sequencial, \' - \', c.nome) as "pedidoLabel"',
+					'pac.cor as "cor"',
 				])
-				.leftJoin("pac.pedidoId", "a")
-				.leftJoin("clientes", "c", "c.id :: varchar = a.cliente")
-				.where("pac.id = :id", { id })
+				.leftJoin('pac.pedidoId', 'a')
+				.leftJoin('clientes', 'c', 'c.id :: varchar = a.cliente')
+				.where('pac.id = :id', { id })
 				.getRawOne()
 
-			if (typeof pacote === "undefined") {
+			if (typeof pacote === 'undefined') {
 				return noContent()
 			}
 
@@ -281,8 +263,22 @@ class PacoteRepository implements IPacoteRepository {
 		}
 	}
 
+	async getByPedidoId(pedidoId: string): Promise<HttpResponse> {
+		try {
+			const pacotes = await this.repository.createQueryBuilder('pac').select(['pac.id as "id"']).where('pac.pedidoId = :pedidoId', { pedidoId }).getRawOne()
+
+			if (typeof pacotes === 'undefined') {
+				return noContent()
+			}
+
+			return ok(pacotes)
+		} catch (err) {
+			return serverError(err)
+		}
+	}
+
 	// update
-	async update({ id, pedidoId, descricao }: IPacoteDTO): Promise<HttpResponse> {
+	async update({ id, pedidoId, descricao, cor }: IPacoteDTO): Promise<HttpResponse> {
 		const pacote = await this.repository.findOne(id)
 
 		if (!pacote) {
@@ -293,6 +289,7 @@ class PacoteRepository implements IPacoteRepository {
 			id,
 			pedidoId,
 			descricao,
+			cor,
 		})
 
 		try {
@@ -301,6 +298,30 @@ class PacoteRepository implements IPacoteRepository {
 			return ok(newpacote)
 		} catch (err) {
 			return serverError(err)
+		}
+	}
+
+	async updateWithQueryRunner({ id, pedidoId, descricao, cor }: IPacoteDTO, transactionManager: EntityManager): Promise<HttpResponse> {
+		try {
+			const pacote = await transactionManager.findOne(Pacote, id)
+
+			if (!pacote) {
+				return notFound()
+			}
+
+			const newPacote = transactionManager.create(Pacote, {
+				id,
+				pedidoId,
+				descricao,
+				cor,
+			})
+
+			const savedPacote = await transactionManager.save(Pacote, newPacote)
+
+			return ok(savedPacote)
+		} catch (error) {
+			console.log('Error updating pacote:', error)
+			return serverError(error)
 		}
 	}
 
@@ -319,7 +340,7 @@ class PacoteRepository implements IPacoteRepository {
 			)
 
 			if (!isFromEspelhoCarga || isFromEspelhoCarga.length === 0) {
-				return conflictError("Pacote não pertence ao espelho de carga")
+				return conflictError('Pacote não pertence ao espelho de carga')
 			}
 
 			const updated = await this.repository.query(
@@ -337,7 +358,43 @@ class PacoteRepository implements IPacoteRepository {
 
 			return ok(updated)
 		} catch (error) {
-			console.log("Error updating pacote item status:", error)
+			console.log('Error updating pacote item status:', error)
+			return serverError(error)
+		}
+	}
+
+	async updatePacoteItemDescarregadoStatus(id: string, espelhoCargaId: string): Promise<HttpResponse> {
+		try {
+			const itemsAlreadyLoaded = await this.repository.query(
+				`
+				SELECT eci.id FROM espelho_carga_items eci
+				LEFT JOIN pacotes_items pi ON pi.id = eci.pacote_item_id
+				WHERE pi.pacote_id = $1
+				AND eci.confirmado = true
+				`,
+				[id]
+			)
+
+			if (itemsAlreadyLoaded.length === 0) {
+				return conflictError('Itens do pacote não foram carregados')
+			}
+
+			const updated = await this.repository.query(
+				`
+				UPDATE espelho_carga_items eci
+				SET descarregado = true
+				FROM pacotes_items pi
+				LEFT JOIN pacotes p ON p.id = pi.pacote_id
+				WHERE pi.id = eci.pacote_item_id
+					AND eci.espelho_carga_id = $1
+					AND p.id = $2
+					`,
+				[espelhoCargaId, id]
+			)
+
+			return ok(updated)
+		} catch (error) {
+			console.log('Error updating pacote item descarregado status:', error)
 			return serverError(error)
 		}
 	}
@@ -345,12 +402,18 @@ class PacoteRepository implements IPacoteRepository {
 	// delete
 	async delete(id: string): Promise<HttpResponse> {
 		try {
+			await this.repository.query(
+				`
+					DELETE FROM pacotes_items WHERE pacote_id = $1
+				`,
+				[id]
+			)
 			await this.repository.delete(id)
 
 			return noContent()
 		} catch (err) {
-			if (err.message.slice(0, 10) === "null value") {
-				throw new AppError("not null constraint", 404)
+			if (err.message.slice(0, 10) === 'null value') {
+				throw new AppError('not null constraint', 404)
 			}
 
 			return serverError(err)
@@ -364,8 +427,8 @@ class PacoteRepository implements IPacoteRepository {
 
 			return noContent()
 		} catch (err) {
-			if (err.message.slice(0, 10) === "null value") {
-				throw new AppError("not null constraint", 404)
+			if (err.message.slice(0, 10) === 'null value') {
+				throw new AppError('not null constraint', 404)
 			}
 
 			return serverError(err)
@@ -388,8 +451,8 @@ class PacoteRepository implements IPacoteRepository {
 
 			return noContent()
 		} catch (err) {
-			if (err.message.slice(0, 10) === "null value") {
-				throw new AppError("not null constraint", 404)
+			if (err.message.slice(0, 10) === 'null value') {
+				throw new AppError('not null constraint', 404)
 			}
 			return serverError(err)
 		}
@@ -397,11 +460,7 @@ class PacoteRepository implements IPacoteRepository {
 
 	async getNumeroPacotesByPedidoId(pedidoId: string): Promise<HttpResponse> {
 		try {
-			const count = await this.repository
-				.createQueryBuilder("pac")
-				.select(['COUNT(pac.id) :: float as "count"'])
-				.where("pac.pedidoId = :pedidoId", { pedidoId })
-				.getRawOne()
+			const count = await this.repository.createQueryBuilder('pac').select(['COUNT(pac.id) :: float as "count"']).where('pac.pedidoId = :pedidoId', { pedidoId }).getRawOne()
 
 			return ok(count)
 		} catch (err) {
@@ -431,6 +490,8 @@ class PacoteRepository implements IPacoteRepository {
 	}
 
 	async selectPacotesByPedidoId(filter: string, pedidoId: string): Promise<HttpResponse> {
+		console.log('filter', filter)
+
 		try {
 			const pacotes = await this.repository.query(
 				`
@@ -467,6 +528,23 @@ class PacoteRepository implements IPacoteRepository {
 			)
 			return ok(pacote)
 		} catch (err) {
+			return serverError(err)
+		}
+	}
+
+	async selectInterno(filter: string): Promise<HttpResponse> {
+		try {
+			const pacotes = await this.repository
+				.createQueryBuilder('pac')
+				.select(['pac.id as "value"', 'pac.descricao as "label"'])
+				.where('pac.pedidoId is null')
+				.andWhere('pac.descricao ilike :filter', { filter: `%${filter}%` })
+				.addOrderBy('pac.descricao')
+				.getRawMany()
+
+			return ok(pacotes)
+		} catch (err) {
+			console.log('Error selecting pacotes interno:', err)
 			return serverError(err)
 		}
 	}

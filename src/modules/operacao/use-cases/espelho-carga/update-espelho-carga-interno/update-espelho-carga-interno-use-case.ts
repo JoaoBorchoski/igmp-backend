@@ -16,12 +16,12 @@ interface IRequest {
 }
 
 @injectable()
-class UpdateEspelhoCargaUseCase {
+class UpdateEspelhoCargaInternoUseCase {
 	constructor(
 		@inject('EspelhoCargaRepository')
 		private espelhoCargaRepository: IEspelhoCargaRepository,
 		@inject('EspelhoCargaItemsRepository')
-		private espelhoCargaItemsRepository: IEspelhoCargaItemsRepository,
+		private espelhoCargaItemsRepository: IEspelhoCargaItemsRepository
 	) {}
 
 	async execute({ id, pedidoId, placa, motorista, lote, descricao, espelhoCargaItems }: IRequest): Promise<HttpResponse> {
@@ -37,8 +37,9 @@ class UpdateEspelhoCargaUseCase {
 					motorista,
 					lote,
 					descricao,
+					interno: true,
 				},
-				queryRunner.manager,
+				queryRunner.manager
 			)
 
 			const items = espelhoCargaItems.reduce((acc, item) => [...acc, ...item.items], [])
@@ -51,7 +52,7 @@ class UpdateEspelhoCargaUseCase {
 			if (itemsApagados.length > 0) {
 				await this.espelhoCargaItemsRepository.deleteWithQueryRunner(
 					itemsApagados.map((item) => item.id),
-					queryRunner.manager,
+					queryRunner.manager
 				)
 			}
 
@@ -63,7 +64,7 @@ class UpdateEspelhoCargaUseCase {
 							pacoteItemId: item.id,
 							quantidade: item.quantidade,
 						},
-						queryRunner.manager,
+						queryRunner.manager
 					)
 				}
 			}
@@ -80,4 +81,4 @@ class UpdateEspelhoCargaUseCase {
 	}
 }
 
-export { UpdateEspelhoCargaUseCase }
+export { UpdateEspelhoCargaInternoUseCase }

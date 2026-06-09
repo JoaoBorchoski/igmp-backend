@@ -1,6 +1,6 @@
-import { inject, injectable } from 'tsyringe'
-import { IEspelhoCargaRepository } from '@modules/operacao/repositories/i-espelho-carga-repository'
-import { IEspelhoCargaDTO } from '@modules/operacao/dtos/i-espelho-carga-dto'
+import { inject, injectable } from "tsyringe"
+import { IEspelhoCargaRepository } from "@modules/operacao/repositories/i-espelho-carga-repository"
+import { IEspelhoCargaDTO } from "@modules/operacao/dtos/i-espelho-carga-dto"
 
 interface IRequest {
 	search: string
@@ -16,16 +16,16 @@ interface ResponseProps {
 }
 
 @injectable()
-class ListEspelhoCargaUseCase {
+class ListEspelhoCargaAbertoUseCase {
 	constructor(
-		@inject('EspelhoCargaRepository')
+		@inject("EspelhoCargaRepository")
 		private espelhoCargaRepository: IEspelhoCargaRepository
-	) {}
+	) { }
 
-	async execute({ search = '', page = 0, rowsPerPage = 50, order = '', filter }: IRequest): Promise<ResponseProps> {
+	async execute({ search = "", page = 0, rowsPerPage = 50, order = "", filter }: IRequest): Promise<ResponseProps> {
 		const newPage = page !== 0 ? page - 1 : 0
 
-		const espelhosCarga = await this.espelhoCargaRepository.list(search, newPage, rowsPerPage, order, filter)
+		const espelhosCarga = await this.espelhoCargaRepository.listAberto(search, newPage, rowsPerPage, order, filter)
 
 		const countEspelhosCarga = await this.espelhoCargaRepository.count(search, filter)
 
@@ -40,4 +40,4 @@ class ListEspelhoCargaUseCase {
 	}
 }
 
-export { ListEspelhoCargaUseCase }
+export { ListEspelhoCargaAbertoUseCase }

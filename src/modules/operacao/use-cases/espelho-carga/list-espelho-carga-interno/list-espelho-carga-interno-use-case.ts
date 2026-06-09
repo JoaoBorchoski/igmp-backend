@@ -16,7 +16,7 @@ interface ResponseProps {
 }
 
 @injectable()
-class ListEspelhoCargaUseCase {
+class ListEspelhoCargaInternoUseCase {
 	constructor(
 		@inject('EspelhoCargaRepository')
 		private espelhoCargaRepository: IEspelhoCargaRepository
@@ -25,9 +25,9 @@ class ListEspelhoCargaUseCase {
 	async execute({ search = '', page = 0, rowsPerPage = 50, order = '', filter }: IRequest): Promise<ResponseProps> {
 		const newPage = page !== 0 ? page - 1 : 0
 
-		const espelhosCarga = await this.espelhoCargaRepository.list(search, newPage, rowsPerPage, order, filter)
+		const espelhosCarga = await this.espelhoCargaRepository.listInterno(search, newPage, rowsPerPage, order, filter)
 
-		const countEspelhosCarga = await this.espelhoCargaRepository.count(search, filter)
+		const countEspelhosCarga = await this.espelhoCargaRepository.countInterno(search, filter)
 
 		const numeroEspelhoCarga = page * rowsPerPage
 
@@ -40,4 +40,4 @@ class ListEspelhoCargaUseCase {
 	}
 }
 
-export { ListEspelhoCargaUseCase }
+export { ListEspelhoCargaInternoUseCase }

@@ -127,7 +127,7 @@ class ClienteRepository implements IClienteRepository {
             columnDirection = order.substring(0, 1) === "-" ? "DESC" : "ASC"
         }
 
-        const referenceArray = ["nome", "cpf", "email"]
+        const referenceArray = ["nome", "cpf"]
         const columnOrder = new Array<"ASC" | "DESC">(2).fill("ASC")
 
         const index = referenceArray.indexOf(columnName)
@@ -150,12 +150,10 @@ class ClienteRepository implements IClienteRepository {
                     new Brackets((query) => {
                         query.andWhere("CAST(cli.nome AS VARCHAR) ilike :search", { search: `%${search}%` })
                         query.orWhere("CAST(cli.cpf AS VARCHAR) ilike :search", { search: `%${search}%` })
-                        query.orWhere("CAST(cli.email AS VARCHAR) ilike :search", { search: `%${search}%` })
                     })
                 )
                 .addOrderBy("cli.nome", columnOrder[0])
                 .addOrderBy("cli.cpf", columnOrder[1])
-                .addOrderBy("cli.email", columnOrder[2])
                 .offset(offset)
                 .limit(rowsPerPage)
                 .take(rowsPerPage)

@@ -1,21 +1,21 @@
-import { inject, injectable } from "tsyringe"
-import { Pedido } from "@modules/operacao/infra/typeorm/entities/pedido"
-import { IPedidoRepository } from "@modules/operacao/repositories/i-pedido-repository"
-import { AppError } from "@shared/errors/app-error"
-import { getConnection, QueryRunner } from "typeorm"
-import { HttpResponse, noContent, ok, serverError } from "@shared/helpers"
-import { IPedidoItemRepository } from "@modules/operacao/repositories/i-pedido-item-repository"
-import { IUserRepository } from "@modules/security/repositories/i-user-repository"
-import { IUserGroupRepository } from "@modules/security/repositories/i-user-group-repository"
-import { IUserProfileRepository } from "@modules/security/repositories/i-user-profile-repository"
-import { IProfileRepository } from "@modules/security/repositories/i-profile-repository"
-import { IClienteRepository } from "@modules/configuracao/repositories/i-cliente-repository"
-import { IProdutoRepository } from "@modules/configuracao/repositories/i-produto-repository"
-import { IPacoteItemRepository } from "@modules/operacao/repositories/i-pacote-item-repository"
-import { IPacoteRepository } from "@modules/operacao/repositories/i-pacote-repository"
-import QRCode from "qrcode"
-import puppeteer from "puppeteer"
-import fs from "fs"
+import { inject, injectable } from 'tsyringe'
+import { Pedido } from '@modules/operacao/infra/typeorm/entities/pedido'
+import { IPedidoRepository } from '@modules/operacao/repositories/i-pedido-repository'
+import { AppError } from '@shared/errors/app-error'
+import { getConnection, QueryRunner } from 'typeorm'
+import { HttpResponse, noContent, ok, serverError } from '@shared/helpers'
+import { IPedidoItemRepository } from '@modules/operacao/repositories/i-pedido-item-repository'
+import { IUserRepository } from '@modules/security/repositories/i-user-repository'
+import { IUserGroupRepository } from '@modules/security/repositories/i-user-group-repository'
+import { IUserProfileRepository } from '@modules/security/repositories/i-user-profile-repository'
+import { IProfileRepository } from '@modules/security/repositories/i-profile-repository'
+import { IClienteRepository } from '@modules/configuracao/repositories/i-cliente-repository'
+import { IProdutoRepository } from '@modules/configuracao/repositories/i-produto-repository'
+import { IPacoteItemRepository } from '@modules/operacao/repositories/i-pacote-item-repository'
+import { IPacoteRepository } from '@modules/operacao/repositories/i-pacote-repository'
+import QRCode from 'qrcode'
+import puppeteer from 'puppeteer'
+import fs from 'fs'
 
 interface IRequest {
 	pedido: any
@@ -26,26 +26,26 @@ interface IRequest {
 @injectable()
 class CreatePedidoImportUseCase {
 	constructor(
-		@inject("PedidoRepository")
+		@inject('PedidoRepository')
 		private pedidoRepository: IPedidoRepository,
-		@inject("UserRepository")
+		@inject('UserRepository')
 		private userRepository: IUserRepository,
-		@inject("UserGroupRepository")
+		@inject('UserGroupRepository')
 		private userGroupRepository: IUserGroupRepository,
-		@inject("UserProfileRepository")
+		@inject('UserProfileRepository')
 		private userProfileRepository: IUserProfileRepository,
-		@inject("ProfileRepository")
+		@inject('ProfileRepository')
 		private profileRepository: IProfileRepository,
-		@inject("ProdutoRepository")
+		@inject('ProdutoRepository')
 		private produtoRepository: IProdutoRepository,
-		@inject("PedidoItemRepository")
+		@inject('PedidoItemRepository')
 		private pedidoItemRepository: IPedidoItemRepository,
-		@inject("ClienteRepository")
+		@inject('ClienteRepository')
 		private clienteRepository: IClienteRepository,
-		@inject("PacoteRepository")
+		@inject('PacoteRepository')
 		private pacoteRepository: IPacoteRepository,
-		@inject("PacoteItemRepository")
-		private pacoteItemRepository: IPacoteItemRepository
+		@inject('PacoteItemRepository')
+		private pacoteItemRepository: IPacoteItemRepository,
 	) {}
 
 	async execute({ pedido, itens, itemsCriadosReq }: IRequest): Promise<HttpResponse> {
@@ -63,7 +63,7 @@ class CreatePedidoImportUseCase {
 			} = await this.clienteRepository.get(pedido.cliente)
 
 			if (!id) {
-				throw new AppError("Cliente não encontrado")
+				throw new AppError('Cliente não encontrado')
 			}
 
 			const newPedido = await this.pedidoRepository.createWithQueryRunner(
@@ -72,25 +72,22 @@ class CreatePedidoImportUseCase {
 					cliente: id,
 					dataEmissao: new Date(pedido.dataEmissao),
 				},
-				queryRunner.manager
+				queryRunner.manager,
 			)
 
 			for await (const item of itens) {
-				let produtoId = await this.produtoRepository.findByNameWithQueryRunner(
-					item.produtoDescricao.split(" - ")[0],
-					queryRunner.manager
-				)
+				let produtoId = await this.produtoRepository.findByNameWithQueryRunner(item.produtoDescricao.split(' - ')[0], queryRunner.manager)
 
 				let prod = produtoId.data
 
 				if (!prod) {
 					const newProduto = await this.produtoRepository.createWithQueryRunner(
 						{
-							nome: item.produtoDescricao.split(" - ")[0],
-							descricao: item.produtoDescricao.split(" - ")[1],
+							nome: item.produtoDescricao.split(' - ')[0],
+							descricao: item.produtoDescricao.split(' - ')[1],
 							tipo: 0,
 						},
-						queryRunner.manager
+						queryRunner.manager,
 					)
 
 					prod = newProduto.data
@@ -103,7 +100,7 @@ class CreatePedidoImportUseCase {
 						quantidade: item.quantidade,
 						kit: item.kit,
 					},
-					queryRunner.manager
+					queryRunner.manager,
 				)
 
 				if (item.kit) {
@@ -113,6 +110,8 @@ class CreatePedidoImportUseCase {
 
 			// Mapa para rastrear quantos itens já foram processados para cada produto
 			const produtosProcessados = new Map<string, number>()
+
+			let pacotesProcessados = 1
 
 			for await (const item of itensKit) {
 				const produto = await this.produtoRepository.getWithQueryRunner(item.data.produto, queryRunner.manager)
@@ -128,9 +127,7 @@ class CreatePedidoImportUseCase {
 					const teste = itensProduto[indiceProduto]
 
 					if (!teste) {
-						throw new AppError(
-							`Item não encontrado para produto ${produto.data.nomeCompleto} na posição ${indiceProduto}`
-						)
+						throw new AppError(`Item não encontrado para produto ${produto.data.nomeCompleto} na posição ${indiceProduto}`)
 					}
 
 					const pacote = await this.pacoteRepository.createWithQueryRunner(
@@ -138,7 +135,8 @@ class CreatePedidoImportUseCase {
 							pedidoId: newPedido.data.id,
 							descricao: `Pacote ${teste.produto} - ${newPedido.data.descricao} - Unidade ${teste.unidade}`,
 						},
-						queryRunner.manager
+						queryRunner.manager,
+						pacotesProcessados,
 					)
 
 					await this.pacoteItemRepository.createWithQueryRunner(
@@ -147,7 +145,7 @@ class CreatePedidoImportUseCase {
 							produto: item.data.produto,
 							quantidade: 1,
 						},
-						queryRunner.manager
+						queryRunner.manager,
 					)
 
 					itemsCriados.push({
@@ -166,6 +164,7 @@ class CreatePedidoImportUseCase {
 
 					// Incrementar o índice para o próximo item deste produto
 					indiceProduto++
+					pacotesProcessados++
 				}
 
 				// Atualizar o mapa com o índice atualizado para este produto
@@ -175,21 +174,21 @@ class CreatePedidoImportUseCase {
 			try {
 				browser = await puppeteer.launch({
 					headless: true,
-					args: ["--no-sandbox", "--disable-setuid-sandbox"],
+					args: ['--no-sandbox', '--disable-setuid-sandbox'],
 				})
 			} catch (browserError) {
-				console.error("Erro ao iniciar o browser:", browserError)
-				throw new AppError("Erro ao gerar PDF: Browser não pôde ser iniciado")
+				console.error('Erro ao iniciar o browser:', browserError)
+				throw new AppError('Erro ao gerar PDF: Browser não pôde ser iniciado')
 			}
 
-			let qrCodeColor = ""
+			let qrCodeColor = ''
 
 			const colors = await this.pacoteRepository.getPacoteColor()
 
 			if (colors.data[0].description.clientes[newPedido.data.clienteDocumento]) {
 				qrCodeColor = colors.data[0].description.clientes[newPedido.data.clienteDocumento]
 			} else {
-				qrCodeColor = "#0088ffff"
+				qrCodeColor = '#0088ffff'
 			}
 
 			const todasEtiquetas: any[] = []
@@ -210,8 +209,8 @@ class CreatePedidoImportUseCase {
 				// Gerar QR code único para cada etiqueta
 				const qrcode = await QRCode.toDataURL(qrCodeDadosStringify, {
 					color: {
-						dark: "#000000",
-						light: "#00000000",
+						dark: '#000000',
+						light: '#00000000',
 					},
 				})
 
@@ -220,10 +219,10 @@ class CreatePedidoImportUseCase {
 					numero: item.unidade,
 					total: item.quantidadeTotal,
 					qrcode: qrcode,
-					torre: item.torre ?? "",
-					andar: item.andar ?? "",
-					apto: item.apto ?? "",
-					ambiente: item.ambiente ?? "",
+					torre: item.torre ?? '',
+					andar: item.andar ?? '',
+					apto: item.apto ?? '',
+					ambiente: item.ambiente ?? '',
 				})
 			}
 
@@ -236,7 +235,7 @@ class CreatePedidoImportUseCase {
 			}
 
 			// Gerar HTML para cada página
-			let paginasHTML = ""
+			let paginasHTML = ''
 			// let logoDataUrl = ""
 			// try {
 			// 	logoDataUrl = fs
@@ -248,7 +247,7 @@ class CreatePedidoImportUseCase {
 			// }
 
 			paginas.forEach((pagina, paginaIndex) => {
-				let etiquetasHTML = ""
+				let etiquetasHTML = ''
 
 				// Etiquetas em 2 colunas com 4 etiquetas em cada
 				for (let i = 0; i < pagina.length; i++) {
@@ -266,23 +265,13 @@ class CreatePedidoImportUseCase {
                             </div>
                             <div style="display: flex; align-items: center; justify-content: space-between; margin-top: auto;">
                                 <div style="flex: 1; font-size: 11px;">
-                                    <div style="margin-bottom: 4px;"><strong>Torre:</strong> ${etiqueta.torre
-										.toString()
-										.substring(0, 35)}</div>
-                                    <div style="margin-bottom: 4px;"><strong>Andar:</strong> ${etiqueta.andar
-										.toString()
-										.substring(0, 15)}</div>
-                                    <div style="margin-bottom: 4px;"><strong>Apto:</strong> ${etiqueta.apto
-										.toString()
-										.substring(0, 15)}</div>
-                                    <div><strong>Ambiente:</strong> ${etiqueta.ambiente
-										.toString()
-										.substring(0, 35)}</div>
+                                    <div style="margin-bottom: 4px;"><strong>Torre:</strong> ${etiqueta.torre.toString().substring(0, 35)}</div>
+                                    <div style="margin-bottom: 4px;"><strong>Andar:</strong> ${etiqueta.andar.toString().substring(0, 15)}</div>
+                                    <div style="margin-bottom: 4px;"><strong>Apto:</strong> ${etiqueta.apto.toString().substring(0, 15)}</div>
+                                    <div><strong>Ambiente:</strong> ${etiqueta.ambiente.toString().substring(0, 35)}</div>
                                 </div>
                                 <div style="text-align: center; margin-left: 15px;">
-                                    <img src="${
-										etiqueta.qrcode
-									}" style="width: 100px; height: 100px; margin: 0 auto 5px; display: block;">
+                                    <img src="${etiqueta.qrcode}" style="width: 100px; height: 100px; margin: 0 auto 5px; display: block;">
                                     <div style="font-size: 10px;">
                                         Etiqueta ${etiqueta.numero} de ${etiqueta.total}
                                     </div>
@@ -294,7 +283,7 @@ class CreatePedidoImportUseCase {
 
 				paginasHTML += `
                     <div class="pagina" style="page-break-after: always;">
-						<h4>${(newPedido.data.descricao + " - " + " Cliente: " + nome).substring(0, 100)}</h4>
+						<h4>${(newPedido.data.descricao + ' - ' + ' Cliente: ' + nome).substring(0, 100)}</h4>
                         <div style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                             ${etiquetasHTML}
                         </div>
@@ -338,7 +327,7 @@ class CreatePedidoImportUseCase {
 			await page.setContent(htmlContent)
 
 			const pdfBuffer = await page.pdf({
-				format: "A4",
+				format: 'A4',
 				printBackground: true,
 			})
 
@@ -346,7 +335,7 @@ class CreatePedidoImportUseCase {
 
 			return itensKit.length > 0 ? ok(pdfBuffer) : noContent()
 		} catch (error) {
-			console.log("error", error)
+			console.log('error', error)
 			await queryRunner.rollbackTransaction()
 			return serverError(error)
 		} finally {
@@ -354,7 +343,7 @@ class CreatePedidoImportUseCase {
 				try {
 					await browser.close()
 				} catch (browserCloseError) {
-					console.error("Erro ao fechar browser:", browserCloseError)
+					console.error('Erro ao fechar browser:', browserCloseError)
 				}
 			}
 			await queryRunner.release()

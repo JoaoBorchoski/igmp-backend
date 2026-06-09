@@ -1,27 +1,27 @@
-import { IUserRepository } from "@modules/authentication/repositories/i-user-repository"
-import { IClienteRepository } from "@modules/configuracao/repositories/i-cliente-repository"
-import { IProdutoRepository } from "@modules/configuracao/repositories/i-produto-repository"
-import { IPacoteItemRepository } from "@modules/operacao/repositories/i-pacote-item-repository"
-import { IPacoteRepository } from "@modules/operacao/repositories/i-pacote-repository"
-import { IPedidoItemRepository } from "@modules/operacao/repositories/i-pedido-item-repository"
-import { IPedidoRepository } from "@modules/operacao/repositories/i-pedido-repository"
-import { IProfileRepository } from "@modules/security/repositories/i-profile-repository"
-import { IUserGroupRepository } from "@modules/security/repositories/i-user-group-repository"
-import { IUserProfileRepository } from "@modules/security/repositories/i-user-profile-repository"
-import { AppError } from "@shared/errors/app-error"
-import { HttpResponse, noContent, ok, serverError } from "@shared/helpers"
-import { hash } from "bcrypt"
-import fs from "fs"
-import moment from "moment"
-import { inject, injectable } from "tsyringe"
-import { getConnection, QueryRunner } from "typeorm"
-import xlsx from "xlsx"
-import QRCode from "qrcode"
-import puppeteer from "puppeteer"
+import { IUserRepository } from '@modules/authentication/repositories/i-user-repository'
+import { IClienteRepository } from '@modules/configuracao/repositories/i-cliente-repository'
+import { IProdutoRepository } from '@modules/configuracao/repositories/i-produto-repository'
+import { IPacoteItemRepository } from '@modules/operacao/repositories/i-pacote-item-repository'
+import { IPacoteRepository } from '@modules/operacao/repositories/i-pacote-repository'
+import { IPedidoItemRepository } from '@modules/operacao/repositories/i-pedido-item-repository'
+import { IPedidoRepository } from '@modules/operacao/repositories/i-pedido-repository'
+import { IProfileRepository } from '@modules/security/repositories/i-profile-repository'
+import { IUserGroupRepository } from '@modules/security/repositories/i-user-group-repository'
+import { IUserProfileRepository } from '@modules/security/repositories/i-user-profile-repository'
+import { AppError } from '@shared/errors/app-error'
+import { HttpResponse, noContent, ok, serverError } from '@shared/helpers'
+import { hash } from 'bcrypt'
+import fs from 'fs'
+import moment from 'moment'
+import { inject, injectable } from 'tsyringe'
+import { getConnection, QueryRunner } from 'typeorm'
+import xlsx from 'xlsx'
+import QRCode from 'qrcode'
+import puppeteer from 'puppeteer'
 
 // Tipagens para os dados do Excel
 interface ExcelRow {
-	"Ordem de embarque": string | number
+	'Ordem de embarque': string | number
 	__EMPTY: string | number
 	__EMPTY_2: string | number
 	__EMPTY_3: string | number
@@ -82,35 +82,35 @@ interface IRequest {
 @injectable()
 class ImportPedidosUseCase {
 	constructor(
-		@inject("PedidoRepository")
+		@inject('PedidoRepository')
 		private pedidoRepository: IPedidoRepository,
-		@inject("UserRepository")
+		@inject('UserRepository')
 		private userRepository: IUserRepository,
-		@inject("UserGroupRepository")
+		@inject('UserGroupRepository')
 		private userGroupRepository: IUserGroupRepository,
-		@inject("UserProfileRepository")
+		@inject('UserProfileRepository')
 		private userProfileRepository: IUserProfileRepository,
-		@inject("ProfileRepository")
+		@inject('ProfileRepository')
 		private profileRepository: IProfileRepository,
-		@inject("ProdutoRepository")
+		@inject('ProdutoRepository')
 		private produtoRepository: IProdutoRepository,
-		@inject("PedidoItemRepository")
+		@inject('PedidoItemRepository')
 		private pedidoItemRepository: IPedidoItemRepository,
-		@inject("ClienteRepository")
+		@inject('ClienteRepository')
 		private clienteRepository: IClienteRepository,
-		@inject("PacoteRepository")
+		@inject('PacoteRepository')
 		private pacoteRepository: IPacoteRepository,
-		@inject("PacoteItemRepository")
-		private pacoteItemRepository: IPacoteItemRepository
+		@inject('PacoteItemRepository')
+		private pacoteItemRepository: IPacoteItemRepository,
 	) {}
 
 	async parseExcelData(row: ExcelRow, queryRunner: QueryRunner): Promise<ParsedPedidoItem> {
 		try {
-			if (!row || !row["Ordem de embarque"]) {
+			if (!row || !row['Ordem de embarque']) {
 				throw new AppError(`Dados inválidos na linha: ${JSON.stringify(row)}`)
 			}
 
-			const nomeProduto = row["Ordem de embarque"].toString().trim()
+			const nomeProduto = row['Ordem de embarque'].toString().trim()
 			if (!nomeProduto) {
 				throw new AppError(`Nome do produto vazio na linha: ${JSON.stringify(row)}`)
 			}
@@ -125,12 +125,12 @@ class ImportPedidosUseCase {
 				const result = {
 					produto: produtoId.data.id,
 					produtoNome: nomeProduto,
-					quantidade: row["__EMPTY_3"] ? parseInt(row["__EMPTY_3"].toString()) : 0,
-					kit: row["__EMPTY"] ? row["__EMPTY"].toString().includes("KT") : false,
+					quantidade: row['__EMPTY_3'] ? parseInt(row['__EMPTY_3'].toString()) : 0,
+					kit: row['__EMPTY'] ? row['__EMPTY'].toString().includes('KT') || row['__EMPTY'].toString().includes('KIT') : false,
 				}
 				return result
 			} else {
-				const descricaoProduto = row["__EMPTY"] ? row["__EMPTY"].toString().trim() : ""
+				const descricaoProduto = row['__EMPTY'] ? row['__EMPTY'].toString().trim() : ''
 
 				const newProduto = await this.produtoRepository.createWithQueryRunner(
 					{
@@ -138,7 +138,7 @@ class ImportPedidosUseCase {
 						descricao: descricaoProduto,
 						tipo: 0,
 					},
-					queryRunner.manager
+					queryRunner.manager,
 				)
 
 				if (newProduto.statusCode === 500) {
@@ -146,18 +146,14 @@ class ImportPedidosUseCase {
 				}
 
 				if (newProduto.statusCode !== 200 || !newProduto.data) {
-					throw new AppError(
-						`Erro ao criar produto: ${nomeProduto} - ${newProduto.statusCode} - ${newProduto.data}`
-					)
+					throw new AppError(`Erro ao criar produto: ${nomeProduto} - ${newProduto.statusCode} - ${newProduto.data}`)
 				}
 
 				const result = {
 					produto: newProduto.data.id,
 					produtoNome: nomeProduto,
-					quantidade: row["__EMPTY_3"] ? parseInt(row["__EMPTY_3"].toString()) : 0,
-					kit: row["__EMPTY"]
-						? row["__EMPTY"].toString().includes("KT") || row["__EMPTY"].toString().includes("KIT")
-						: false,
+					quantidade: row['__EMPTY_3'] ? parseInt(row['__EMPTY_3'].toString()) : 0,
+					kit: row['__EMPTY'] ? row['__EMPTY'].toString().includes('KT') || row['__EMPTY'].toString().includes('KIT') : false,
 				}
 				return result
 			}
@@ -170,7 +166,7 @@ class ImportPedidosUseCase {
 	private async parseExcelFile(file: Express.Multer.File): Promise<ExcelRow[]> {
 		return new Promise((resolve) => {
 			const fileContent = fs.readFileSync(file.path)
-			const workbook = xlsx.read(fileContent, { type: "buffer" })
+			const workbook = xlsx.read(fileContent, { type: 'buffer' })
 			const sheetNames = workbook.SheetNames
 			const excelData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetNames[0]]) as ExcelRow[]
 
@@ -187,13 +183,13 @@ class ImportPedidosUseCase {
 			const rows = await this.parseExcelFile(file)
 
 			const cabecalho: PedidoCabecalho = {
-				pedido: rows[0]["Ordem de embarque"].toString(),
-				dataEmissao: moment(rows[0]["__EMPTY_5"].toString().split(": ")[1], "DD/MM/YYYY").toDate(),
-				cliente: rows[1]["Ordem de embarque"].toString().split(": ")[1],
-				rua: rows[2]["Ordem de embarque"].toString().split(": ")[1],
-				bairro: rows[2]["__EMPTY_2"].toString().split(": ")[1],
-				cidade: rows[2]["__EMPTY_5"].toString().split(": ")[1],
-				referencia: rows[3]["__EMPTY_5"].toString().split(": ")[1] ?? "",
+				pedido: rows[0]['Ordem de embarque'].toString(),
+				dataEmissao: moment(rows[0]['__EMPTY_5'].toString().split(': ')[1], 'DD/MM/YYYY').toDate(),
+				cliente: rows[1]['Ordem de embarque'].toString().split(': ')[1],
+				rua: rows[2]['Ordem de embarque'].toString().split(': ')[1],
+				bairro: rows[2]['__EMPTY_2'].toString().split(': ')[1],
+				cidade: rows[2]['__EMPTY_5'].toString().split(': ')[1],
+				referencia: rows[3]['__EMPTY_5'].toString().split(': ')[1] ?? '',
 			}
 
 			const {
@@ -201,16 +197,16 @@ class ImportPedidosUseCase {
 			} = await this.clienteRepository.findByName(cabecalho.cliente)
 
 			if (!id) {
-				throw new AppError("Cliente não encontrado")
+				throw new AppError('Cliente não encontrado')
 			}
 
 			const pedido = await this.pedidoRepository.createWithQueryRunner(
 				{
-					descricao: cabecalho.pedido + " - " + cabecalho.referencia,
+					descricao: cabecalho.pedido + ' - ' + cabecalho.referencia,
 					cliente: id,
 					dataEmissao: new Date(cabecalho.dataEmissao),
 				},
-				queryRunner.manager
+				queryRunner.manager,
 			)
 
 			const items = rows.slice(6, rows.length - 1)
@@ -223,11 +219,9 @@ class ImportPedidosUseCase {
 			for await (const row of items) {
 				const pedidoItemParse: ParsedPedidoItem = await this.parseExcelData(row, queryRunner)
 
-				// console.log("pedidoItemParse", pedidoItemParse)
-
 				// Validar se o parse foi bem-sucedido
 				if (!pedidoItemParse || !pedidoItemParse.produto) {
-					throw new AppError(`Erro ao processar item do pedido: ${row["Ordem de embarque"]}`)
+					throw new AppError(`Erro ao processar item do pedido: ${row['Ordem de embarque']}`)
 				}
 
 				// console.log("=== CRIANDO PEDIDO ITEM ===")
@@ -245,7 +239,7 @@ class ImportPedidosUseCase {
 						quantidade: pedidoItemParse.quantidade,
 						kit: pedidoItemParse.kit,
 					},
-					queryRunner.manager
+					queryRunner.manager,
 				)
 
 				// console.log("Resultado da criação do pedidoItem:", pedidoItemResult)
@@ -253,22 +247,15 @@ class ImportPedidosUseCase {
 				// Verificar se houve erro na criação do pedidoItem
 				if (pedidoItemResult.statusCode === 500) {
 					// console.log("ERRO: Transação abortada durante criação do pedidoItem!")
-					throw new AppError(
-						`Transação abortada ao criar pedidoItem para produto: ${pedidoItemParse.produtoNome}`
-					)
+					throw new AppError(`Transação abortada ao criar pedidoItem para produto: ${pedidoItemParse.produtoNome}`)
 				}
 
 				if (pedidoItemResult.statusCode !== 200) {
 					// console.log("ERRO: Falha na criação do pedidoItem!")
-					throw new AppError(
-						`Erro ao criar pedidoItem: ${pedidoItemParse.produtoNome} - Status: ${pedidoItemResult.statusCode}`
-					)
+					throw new AppError(`Erro ao criar pedidoItem: ${pedidoItemParse.produtoNome} - Status: ${pedidoItemResult.statusCode}`)
 				}
 
-				const produto = await this.produtoRepository.getWithQueryRunner(
-					pedidoItemParse.produto,
-					queryRunner.manager
-				)
+				const produto = await this.produtoRepository.getWithQueryRunner(pedidoItemParse.produto, queryRunner.manager)
 
 				todosItensCriados.push({
 					...pedidoItemResult.data,
@@ -291,7 +278,7 @@ class ImportPedidosUseCase {
 							pedidoId: pedido.data.id,
 							descricao: `Pacote ${item.produtoNome} - ${pedido.data.descricao} - Unidade ${i + 1}`,
 						},
-						queryRunner.manager
+						queryRunner.manager,
 					)
 
 					await this.pacoteItemRepository.createWithQueryRunner(
@@ -300,7 +287,7 @@ class ImportPedidosUseCase {
 							produto: item.produto,
 							quantidade: 1, // Cada pacote contém apenas 1 unidade
 						},
-						queryRunner.manager
+						queryRunner.manager,
 					)
 
 					const produto = await this.produtoRepository.getWithQueryRunner(item.produto, queryRunner.manager)
@@ -319,17 +306,17 @@ class ImportPedidosUseCase {
 
 			const browser = await puppeteer.launch({
 				headless: true,
-				args: ["--no-sandbox", "--disable-setuid-sandbox"],
+				args: ['--no-sandbox', '--disable-setuid-sandbox'],
 			})
 
-			let qrCodeColor = ""
+			let qrCodeColor = ''
 
 			const colors = await this.pacoteRepository.getPacoteColor()
 
 			if (colors.data[0].description.clientes[pedido.data.clienteDocumento]) {
 				qrCodeColor = colors.data[0].description.clientes[pedido.data.clienteDocumento]
 			} else {
-				qrCodeColor = "#0088ffff"
+				qrCodeColor = '#0088ffff'
 			}
 
 			// Gerar todas as etiquetas primeiro
@@ -351,8 +338,8 @@ class ImportPedidosUseCase {
 				// Gerar QR code único para cada etiqueta
 				const qrcode = await QRCode.toDataURL(qrCodeDadosStringify, {
 					color: {
-						dark: "#000000",
-						light: "#00000000",
+						dark: '#000000',
+						light: '#00000000',
 					},
 				})
 
@@ -466,10 +453,10 @@ class ImportPedidosUseCase {
 				itens: todosItensCriados,
 				itemsCriados: itemsCriados.map((item) => ({
 					...item,
-					torre: "",
+					torre: '',
 					andar: null,
 					apto: null,
-					ambiente: "",
+					ambiente: '',
 				})),
 			}
 

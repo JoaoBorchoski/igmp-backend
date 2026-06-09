@@ -1,9 +1,9 @@
-import { Brackets, EntityManager, getRepository, Repository } from "typeorm"
-import { IEspelhoCargaItemsDTO } from "@modules/operacao/dtos/i-espelho-carga-items-dto"
-import { IEspelhoCargaItemsRepository } from "@modules/operacao/repositories/i-espelho-carga-items-repository"
-import { EspelhoCargaItems } from "@modules/operacao/infra/typeorm/entities/espelho-carga-items"
-import { noContent, serverError, ok, notFound, HttpResponse } from "@shared/helpers"
-import { AppError } from "@shared/errors/app-error"
+import { Brackets, EntityManager, getRepository, Repository } from 'typeorm'
+import { IEspelhoCargaItemsDTO } from '@modules/operacao/dtos/i-espelho-carga-items-dto'
+import { IEspelhoCargaItemsRepository } from '@modules/operacao/repositories/i-espelho-carga-items-repository'
+import { EspelhoCargaItems } from '@modules/operacao/infra/typeorm/entities/espelho-carga-items'
+import { noContent, serverError, ok, notFound, HttpResponse } from '@shared/helpers'
+import { AppError } from '@shared/errors/app-error'
 
 class EspelhoCargaItemsRepository implements IEspelhoCargaItemsRepository {
 	private repository: Repository<EspelhoCargaItems>
@@ -32,22 +32,19 @@ class EspelhoCargaItemsRepository implements IEspelhoCargaItemsRepository {
 		return result
 	}
 
-	async createWithQueryRunner(
-		{ espelhoCargaId, pacoteItemId, quantidade }: IEspelhoCargaItemsDTO,
-		transactionManager: EntityManager
-	): Promise<HttpResponse> {
+	async createWithQueryRunner({ espelhoCargaId, pacoteItemId, quantidade }: IEspelhoCargaItemsDTO, transactionManager: EntityManager): Promise<HttpResponse> {
 		try {
 			if (!transactionManager.queryRunner || !transactionManager.queryRunner.isTransactionActive) {
-				console.log("ERRO: Transação não está mais ativa ao tentar criar espelho_carga_items!")
-				return serverError(new Error("Transação não está mais ativa"))
+				console.log('ERRO: Transação não está mais ativa ao tentar criar espelho_carga_items!')
+				return serverError(new Error('Transação não está mais ativa'))
 			}
 
 			if (!espelhoCargaId) {
-				throw new Error("espelhoCargaId é obrigatório")
+				throw new Error('espelhoCargaId é obrigatório')
 			}
 
 			if (!pacoteItemId) {
-				throw new Error("pacoteItemId é obrigatório")
+				throw new Error('pacoteItemId é obrigatório')
 			}
 
 			const espelhoCargaItems = transactionManager.create(EspelhoCargaItems, {
@@ -62,38 +59,32 @@ class EspelhoCargaItemsRepository implements IEspelhoCargaItemsRepository {
 					return ok(espelhoCargaItemsResult)
 				})
 				.catch((error) => {
-					console.log("Erro ao salvar espelho_carga_items:", error)
+					console.log('Erro ao salvar espelho_carga_items:', error)
 					return serverError(error)
 				})
 
 			return result
 		} catch (error) {
-			console.log("Erro geral na criação do espelho_carga_items:", error)
+			console.log('Erro geral na criação do espelho_carga_items:', error)
 			return serverError(error)
 		}
 	}
 
 	// list
-	async list(
-		search: string,
-		page: number,
-		rowsPerPage: number,
-		order: string,
-		filter: string
-	): Promise<HttpResponse> {
+	async list(search: string, page: number, rowsPerPage: number, order: string, filter: string): Promise<HttpResponse> {
 		let columnName: string
-		let columnDirection: "ASC" | "DESC"
+		let columnDirection: 'ASC' | 'DESC'
 
-		if (typeof order === "undefined" || order === "") {
-			columnName = "quantidade"
-			columnDirection = "ASC"
+		if (typeof order === 'undefined' || order === '') {
+			columnName = 'quantidade'
+			columnDirection = 'ASC'
 		} else {
-			columnName = order.substring(0, 1) === "-" ? order.substring(1) : order
-			columnDirection = order.substring(0, 1) === "-" ? "DESC" : "ASC"
+			columnName = order.substring(0, 1) === '-' ? order.substring(1) : order
+			columnDirection = order.substring(0, 1) === '-' ? 'DESC' : 'ASC'
 		}
 
-		const referenceArray = ["quantidade", "espelhoCargaPlaca"]
-		const columnOrder = new Array<"ASC" | "DESC">(2).fill("ASC")
+		const referenceArray = ['quantidade', 'espelhoCargaPlaca']
+		const columnOrder = new Array<'ASC' | 'DESC'>(2).fill('ASC')
 
 		const index = referenceArray.indexOf(columnName)
 
@@ -103,7 +94,7 @@ class EspelhoCargaItemsRepository implements IEspelhoCargaItemsRepository {
 
 		try {
 			let query = this.repository
-				.createQueryBuilder("eci")
+				.createQueryBuilder('eci')
 				.select([
 					'eci.id as "id"',
 					'eci.espelhoCargaId as "espelhoCargaId"',
@@ -111,7 +102,7 @@ class EspelhoCargaItemsRepository implements IEspelhoCargaItemsRepository {
 					'eci.pacoteItemId as "pacoteItemId"',
 					'eci.quantidade as "quantidade"',
 				])
-				.leftJoin("eci.espelhoCargaId", "ec")
+				.leftJoin('eci.espelhoCargaId', 'ec')
 
 			if (filter) {
 				query = query.where(filter)
@@ -120,12 +111,12 @@ class EspelhoCargaItemsRepository implements IEspelhoCargaItemsRepository {
 			const espelhosCargaItems = await query
 				.andWhere(
 					new Brackets((query) => {
-						query.andWhere("CAST(eci.quantidade AS VARCHAR) ilike :search", { search: `%${search}%` })
-						query.orWhere("CAST(ec.placa AS VARCHAR) ilike :search", { search: `%${search}%` })
-					})
+						query.andWhere('CAST(eci.quantidade AS VARCHAR) ilike :search', { search: `%${search}%` })
+						query.orWhere('CAST(ec.placa AS VARCHAR) ilike :search', { search: `%${search}%` })
+					}),
 				)
-				.addOrderBy("eci.quantidade", columnOrder[0])
-				.addOrderBy("ec.placa", columnOrder[1])
+				.addOrderBy('eci.quantidade', columnOrder[0])
+				.addOrderBy('ec.placa', columnOrder[1])
 				.offset(offset)
 				.limit(rowsPerPage)
 				.take(rowsPerPage)
@@ -141,14 +132,14 @@ class EspelhoCargaItemsRepository implements IEspelhoCargaItemsRepository {
 	async select(filter: string): Promise<HttpResponse> {
 		try {
 			const espelhosCargaItems = await this.repository
-				.createQueryBuilder("eci")
+				.createQueryBuilder('eci')
 				.select(['eci.id as "value"', 'eci.espelhoCargaId as "label"'])
-				.addOrderBy("eci.espelhoCargaId")
+				.addOrderBy('eci.espelhoCargaId')
 				.getRawMany()
 
 			return ok(espelhosCargaItems)
 		} catch (err) {
-			console.log("Error in select:", err)
+			console.log('Error in select:', err)
 			return serverError(err)
 		}
 	}
@@ -156,21 +147,21 @@ class EspelhoCargaItemsRepository implements IEspelhoCargaItemsRepository {
 	async selectByEspelhoCargaId(filter: string, espelhoCargaId: string): Promise<HttpResponse> {
 		try {
 			let query = this.repository
-				.createQueryBuilder("eci")
-				.select(['eci.id as "value"', "CONCAT(pi.produto, ' - Qtd: ', eci.quantidade) as \"label\""])
-				.leftJoin("pacotes_items", "pi", "pi.id :: varchar = eci.pacoteItemId")
-				.leftJoin("eci.espelhoCargaId", "ec")
-				.where("eci.espelhoCargaId = :espelhoCargaId", { espelhoCargaId })
+				.createQueryBuilder('eci')
+				.select(['eci.id as "value"', 'CONCAT(pi.produto, \' - Qtd: \', eci.quantidade) as "label"'])
+				.leftJoin('pacotes_items', 'pi', 'pi.id :: varchar = eci.pacoteItemId')
+				.leftJoin('eci.espelhoCargaId', 'ec')
+				.where('eci.espelhoCargaId = :espelhoCargaId', { espelhoCargaId })
 
 			if (filter) {
-				query = query.andWhere("pi.produto ilike :filter", { filter: `${filter}%` })
+				query = query.andWhere('pi.produto ilike :filter', { filter: `${filter}%` })
 			}
 
-			const espelhosCargaItems = await query.addOrderBy("eci.espelhoCargaId").getRawMany()
+			const espelhosCargaItems = await query.addOrderBy('eci.espelhoCargaId').getRawMany()
 
 			return ok(espelhosCargaItems)
 		} catch (err) {
-			console.log("Error in selectByEspelhoCargaId:", err)
+			console.log('Error in selectByEspelhoCargaId:', err)
 			return serverError(err)
 		}
 	}
@@ -179,15 +170,15 @@ class EspelhoCargaItemsRepository implements IEspelhoCargaItemsRepository {
 	async idSelect(id: string): Promise<HttpResponse> {
 		try {
 			const espelhoCargaItems = await this.repository
-				.createQueryBuilder("eci")
-				.select(['eci.id as "value"', "CONCAT(ec.placa, ' - Qtd: ', eci.quantidade) as \"label\""])
-				.leftJoin("eci.espelhoCargaId", "ec")
-				.where("eci.id = :id", { id: `${id}` })
+				.createQueryBuilder('eci')
+				.select(['eci.id as "value"', 'CONCAT(ec.placa, \' - Qtd: \', eci.quantidade) as "label"'])
+				.leftJoin('eci.espelhoCargaId', 'ec')
+				.where('eci.id = :id', { id: `${id}` })
 				.getRawOne()
 
 			return ok(espelhoCargaItems)
 		} catch (err) {
-			console.log("Error in idSelect:", err)
+			console.log('Error in idSelect:', err)
 			return serverError(err)
 		}
 	}
@@ -195,10 +186,7 @@ class EspelhoCargaItemsRepository implements IEspelhoCargaItemsRepository {
 	// count
 	async count(search: string, filter: string): Promise<HttpResponse> {
 		try {
-			let query = this.repository
-				.createQueryBuilder("eci")
-				.select(['eci.id as "id"'])
-				.leftJoin("eci.espelhoCargaId", "ec")
+			let query = this.repository.createQueryBuilder('eci').select(['eci.id as "id"']).leftJoin('eci.espelhoCargaId', 'ec')
 
 			if (filter) {
 				query = query.where(filter)
@@ -207,9 +195,9 @@ class EspelhoCargaItemsRepository implements IEspelhoCargaItemsRepository {
 			const espelhosCargaItems = await query
 				.andWhere(
 					new Brackets((query) => {
-						query.andWhere("CAST(eci.quantidade AS VARCHAR) ilike :search", { search: `%${search}%` })
-						query.orWhere("CAST(ec.placa AS VARCHAR) ilike :search", { search: `%${search}%` })
-					})
+						query.andWhere('CAST(eci.quantidade AS VARCHAR) ilike :search', { search: `%${search}%` })
+						query.orWhere('CAST(ec.placa AS VARCHAR) ilike :search', { search: `%${search}%` })
+					}),
 				)
 				.getRawMany()
 
@@ -223,7 +211,7 @@ class EspelhoCargaItemsRepository implements IEspelhoCargaItemsRepository {
 	async get(id: string): Promise<HttpResponse> {
 		try {
 			const espelhoCargaItems = await this.repository
-				.createQueryBuilder("eci")
+				.createQueryBuilder('eci')
 				.select([
 					'eci.id as "id"',
 					'eci.espelhoCargaId as "espelhoCargaId"',
@@ -231,11 +219,11 @@ class EspelhoCargaItemsRepository implements IEspelhoCargaItemsRepository {
 					'eci.pacoteItemId as "pacoteItemId"',
 					'eci.quantidade as "quantidade"',
 				])
-				.leftJoin("eci.espelhoCargaId", "ec")
-				.where("eci.id = :id", { id })
+				.leftJoin('eci.espelhoCargaId', 'ec')
+				.where('eci.id = :id', { id })
 				.getRawOne()
 
-			if (typeof espelhoCargaItems === "undefined") {
+			if (typeof espelhoCargaItems === 'undefined') {
 				return noContent()
 			}
 
@@ -248,7 +236,7 @@ class EspelhoCargaItemsRepository implements IEspelhoCargaItemsRepository {
 	async getByEspelhoCargaId(espelhoCargaId: string): Promise<HttpResponse> {
 		try {
 			const espelhosCargaItems = await this.repository
-				.createQueryBuilder("eci")
+				.createQueryBuilder('eci')
 				.select([
 					'eci.id as "id"',
 					'eci.espelhoCargaId as "espelhoCargaId"',
@@ -256,13 +244,33 @@ class EspelhoCargaItemsRepository implements IEspelhoCargaItemsRepository {
 					'eci.pacoteItemId as "pacoteItemId"',
 					'eci.quantidade as "quantidade"',
 				])
-				.leftJoin("eci.espelhoCargaId", "ec")
-				.where("eci.espelhoCargaId = :espelhoCargaId", { espelhoCargaId })
+				.leftJoin('eci.espelhoCargaId', 'ec')
+				.where('eci.espelhoCargaId = :espelhoCargaId', { espelhoCargaId })
 				.getRawMany()
 
 			return ok(espelhosCargaItems)
 		} catch (err) {
 			return serverError(err)
+		}
+	}
+
+	async getByPacoteItemId(pacoteId: string): Promise<HttpResponse> {
+		try {
+			const espelhoCargaItems = await this.repository
+				.createQueryBuilder('eci')
+				.select(['eci.id as "id"'])
+				.leftJoin('eci.pacoteItemId', 'pi')
+				.leftJoin('pi.pacoteId', 'p')
+				.where('p.id = :pacoteId', { pacoteId })
+				.getRawOne()
+
+			if (typeof espelhoCargaItems === 'undefined') {
+				return noContent()
+			}
+
+			return ok(espelhoCargaItems)
+		} catch (error) {
+			return serverError(error)
 		}
 	}
 
@@ -290,10 +298,7 @@ class EspelhoCargaItemsRepository implements IEspelhoCargaItemsRepository {
 		}
 	}
 
-	async updateWithQueryRunner(
-		{ id, espelhoCargaId, pacoteItemId, quantidade }: IEspelhoCargaItemsDTO,
-		transactionManager: EntityManager
-	): Promise<HttpResponse> {
+	async updateWithQueryRunner({ id, espelhoCargaId, pacoteItemId, quantidade }: IEspelhoCargaItemsDTO, transactionManager: EntityManager): Promise<HttpResponse> {
 		const espelhoCargaItems = await transactionManager.findOne(EspelhoCargaItems, id)
 
 		if (!espelhoCargaItems) {
@@ -323,8 +328,8 @@ class EspelhoCargaItemsRepository implements IEspelhoCargaItemsRepository {
 
 			return noContent()
 		} catch (err) {
-			if (err.message.slice(0, 10) === "null value") {
-				throw new AppError("not null constraint", 404)
+			if (err.message.slice(0, 10) === 'null value') {
+				throw new AppError('not null constraint', 404)
 			}
 
 			return serverError(err)
@@ -338,8 +343,8 @@ class EspelhoCargaItemsRepository implements IEspelhoCargaItemsRepository {
 
 			return noContent()
 		} catch (err) {
-			if (err.message.slice(0, 10) === "null value") {
-				throw new AppError("not null constraint", 404)
+			if (err.message.slice(0, 10) === 'null value') {
+				throw new AppError('not null constraint', 404)
 			}
 
 			return serverError(err)
@@ -352,18 +357,15 @@ class EspelhoCargaItemsRepository implements IEspelhoCargaItemsRepository {
 
 			return noContent()
 		} catch (err) {
-			if (err.message.slice(0, 10) === "null value") {
-				throw new AppError("not null constraint", 404)
+			if (err.message.slice(0, 10) === 'null value') {
+				throw new AppError('not null constraint', 404)
 			}
 
 			return serverError(err)
 		}
 	}
 
-	async deleteByEspelhoCargaIdWithQueryRunner(
-		espelhoCargaId: string,
-		transactionManager: EntityManager
-	): Promise<HttpResponse> {
+	async deleteByEspelhoCargaIdWithQueryRunner(espelhoCargaId: string, transactionManager: EntityManager): Promise<HttpResponse> {
 		try {
 			await transactionManager.delete(EspelhoCargaItems, { espelhoCargaId: espelhoCargaId })
 
