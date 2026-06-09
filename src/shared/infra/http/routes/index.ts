@@ -43,6 +43,8 @@ import { espelhosCargaRoutesInterno } from './operacao/espelhos-carga-routes-int
 
 const router = Router()
 
+router.get('/health', (request, response) => response.json({ status: 'ok' }))
+
 router.use(authenticateRoutes)
 router.use('/block-reasons', blockReasonsRoutes)
 router.use('/user-groups', userGroupsRoutes)
